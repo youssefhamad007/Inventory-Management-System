@@ -1,30 +1,45 @@
+from decimal import Decimal
+from typing import List, Optional
+
 from fastapi import APIRouter, Depends
-from app.db.supabase import get_supabase_client
-from app.auth.permissions import require_manager
+from pydantic import BaseModel
+
+from app.auth.permissions import require_role
+from app.auth.schemas import UserContext
+from app.services.dashboard_service import DashboardService
+
+
+class OrderSummary(BaseModel):
+    pending: int
+    delivered: int
+
+
+class DashboardSummary(BaseModel):
+    total_inventory_value: Decimal
+    low_stock_alerts: list
+    order_summary: OrderSummary
+    recent_transactions: list
+
 
 router = APIRouter()
 
-@router.get("/summary")
-async def get_dashboard_summary(user=Depends(require_manager())):
-    supabase = get_supabase_client()
-    
-    # 1. Total Products
-    products_count = supabase.table("products").select("id", count="exact").execute()
-    
-    # 2. Total Stock Value (simplified)
-    # SUM(stock_levels.quantity * products.cost_price)
-    # Supabase/PostgREST doesn't support complex aggregations directly easily without RPC
-    # So we'll use a simple query or assume an RPC exists.
-    # For now, let's just get count of low stock items.
-    
-    low_stock = supabase.table("stock_levels").select("id", count="exact").filter("quantity", "lte", 10).execute() # placeholder logic
-    
-    # 3. Recent Transactions
-    recent_txns = supabase.table("stock_transactions").select("*, stock_levels(products(name))").order("created_at", desc=True).limit(5).execute()
-    
-    return {
-        "total_products": products_count.count,
-        "low_stock_alerts": low_stock.count,
-        "recent_transactions": recent_txns.data,
-        "system_status": "operational"
-    }
+
+@router.get(
+    "/summary",
+    response_model=DashboardSummary,
+    summary="Get dashboard summary",
+    description=(
+        "Aggregate high-level KPIs for the inventory management dashboard, including:\n"
+        "- Total inventory value\n"
+        "- Low stock alerts\n"
+        "- Current month's pending vs delivered orders\n"
+        "- Recent stock movement transactions\n\n"
+        "- **Roles**: Manager and Admin"
+    ),
+)
+async def get_dashboard_summary(
+    user: UserContext = Depends(require_role(["admin", "manager"]))
+) -> DashboardSummary:
+    summary = DashboardService.get_summary()
+    return DashboardSummary(**summary)
+

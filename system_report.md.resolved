@@ -1,0 +1,326 @@
+# Inventory Management System (IMS) — System Report
+
+**Project:** Scalable Web-Based Inventory Management System  
+**Date:** 2026-03-08  
+**Version:** 1.0.0  
+
+---
+
+## 1. Executive Summary
+
+The Inventory Management System (IMS) is a **multi-tenant, role-based web application** designed for managing products, stock levels, orders, branches, and users. It follows a **three-tier architecture**:
+
+| Layer | Technology | Status |
+|-------|-----------|--------|
+| **Frontend** | React 19 + TypeScript + Vite 7 + Tailwind CSS 4 | ✅ Implemented |
+| **Backend** | Python FastAPI + Pydantic v2 | ✅ Implemented |
+| **Database** | Supabase (PostgreSQL 17) with RLS | ✅ Deployed |
+| **Realtime** | Supabase Realtime (WebSocket) | ✅ Configured |
+
+The system is hosted on **Supabase** (`eu-central-1` region) and uses **Supabase Auth** for JWT-based authentication. The database schema consists of **10 tables**, **32 RLS policies**, **23 indexes**, and a critical **RPC function** for atomic stock management.
+
+---
+
+## 2. System Architecture
+
+```mermaid
+graph TB
+    subgraph "Frontend — React + Vite + TypeScript"
+        A[React SPA] --> B[TanStack Query v5]
+        A --> C[React Router v7]
+        A --> D[Tailwind CSS Components]
+    end
+
+    subgraph "Backend — FastAPI"
+        E[FastAPI Server] --> F[JWT Auth Middleware]
+        E --> G[Business Logic Services]
+        E --> H[RBAC Permissions Layer]
+    end
+
+    subgraph "Supabase Platform"
+        I[(PostgreSQL 17 + RLS)]
+        J[Supabase Auth]
+        K[Supabase Realtime]
+    end
+
+    B -->|REST API| E
+    A -->|Realtime WS| K
+    F -->|Verify JWT| J
+    G -->|Supabase Client| I
+```
+
+> [!IMPORTANT]
+> All data mutations flow through the **FastAPI backend**, which enforces RBAC and delegates stock changes to the database's `adjust_stock_level()` RPC for atomic, race-condition-safe updates.
+
+---
+
+## 3. Technology Stack
+
+### 3.1 Frontend
+
+| Category | Technology | Version |
+|----------|-----------|---------|
+| Framework | React | 19.2.0 |
+| Build Tool | Vite | 7.3.1 |
+| Language | TypeScript | 5.9.3 |
+| Styling | Tailwind CSS | 4.2.1 |
+| State / Data | TanStack Query | 5.90.21 |
+| Tables | TanStack Table | 8.21.3 |
+| Routing | React Router DOM | 7.13.1 |
+| Charts | Recharts | 3.7.0 |
+| Animations | Framer Motion | 12.34.4 |
+| Icons | Lucide React | 0.576.0 |
+| Notifications | Sonner | 2.0.7 |
+| Backend Client | Axios | 1.13.6 |
+| Supabase Client | @supabase/supabase-js | 2.98.0 |
+| UI Primitives | Radix UI (Dropdown, Popover) | Latest |
+| Drag & Drop | dnd-kit | Latest |
+
+### 3.2 Backend
+
+| Category | Technology | Version |
+|----------|-----------|---------|
+| Framework | FastAPI | ≥ 0.110.0 |
+| Server | Uvicorn | ≥ 0.27.1 |
+| Language | Python | 3.x |
+| Validation | Pydantic + Pydantic Settings | ≥ 2.6.1 |
+| Supabase SDK | supabase-py | ≥ 2.3.7 |
+| HTTP Client | httpx | ≥ 0.26.0 |
+| Testing | pytest | ≥ 8.0.0 |
+
+### 3.3 Database & Platform
+
+| Category | Technology |
+|----------|-----------|
+| Database | PostgreSQL 17 (Supabase) |
+| Authentication | Supabase Auth (JWT) |
+| Realtime | Supabase Realtime (WebSocket) |
+| Region | `eu-central-1` |
+
+---
+
+## 4. Frontend Implementation
+
+### 4.1 Pages (8 total)
+
+| Page | File | Key Features |
+|------|------|-------------|
+| Dashboard | [DashboardPage.tsx](file:///w:/level%203/Software/System/src/pages/DashboardPage.tsx) | KPIs, low-stock alerts, recent transactions, system overview |
+| Products | [ProductsPage.tsx](file:///w:/level%203/Software/System/src/pages/ProductsPage.tsx) | CRUD, search/filter by category/supplier, SKU & barcode |
+| Stock | [StockPage.tsx](file:///w:/level%203/Software/System/src/pages/StockPage.tsx) | Branch selector, live quantities, quick adjust modal |
+| Orders | [OrdersPage.tsx](file:///w:/level%203/Software/System/src/pages/OrdersPage.tsx) | Purchase/Sale tabs, line items, status workflow |
+| Branches | [BranchesPage.tsx](file:///w:/level%203/Software/System/src/pages/BranchesPage.tsx) | CRUD branches, toggle active/inactive |
+| Users | [UsersPage.tsx](file:///w:/level%203/Software/System/src/pages/UsersPage.tsx) | List users, assign roles and branches |
+| Reports | [ReportsPage.tsx](file:///w:/level%203/Software/System/src/pages/ReportsPage.tsx) | Date range filters, stock movement, export PDF/CSV |
+| 404 | [NotFoundPage.tsx](file:///w:/level%203/Software/System/src/pages/NotFoundPage.tsx) | Error boundary for invalid routes |
+
+### 4.2 Shared Components
+
+| Component | Purpose |
+|-----------|---------|
+| [DataTable.tsx](file:///w:/level%203/Software/System/src/components/DataTable.tsx) | Reusable data table with sorting, filtering, pagination |
+| [CommandPalette.tsx](file:///w:/level%203/Software/System/src/components/CommandPalette.tsx) | Global search/command palette (⌘+K) |
+| [TransferStockModal.tsx](file:///w:/level%203/Software/System/src/components/TransferStockModal.tsx) | Inter-branch stock transfer dialog |
+| Layout (Header, Sidebar) | Application shell with navigation |
+| UI Primitives | Button, Input, Table, Dropdown, Popover |
+
+### 4.3 Key Design Patterns
+
+- **Lazy loading**: All route pages use `React.lazy()` with `Suspense` for code splitting
+- **Server state**: TanStack Query manages all API data with 5-minute stale time and 2 retries
+- **Routing**: React Router v7 `createBrowserRouter` with nested layout routes
+- **API client**: Centralized Axios instance in [src/api/client.ts](file:///w:/level%203/Software/System/src/api/client.ts)
+
+---
+
+## 5. Backend Implementation
+
+### 5.1 Application Entry Point
+
+The FastAPI app is defined in [main.py](file:///w:/level%203/Software/System/backend/app/main.py) with:
+- CORS middleware (currently allows all origins)
+- Health check endpoint (`/api/v1/health`)
+- 6 registered API routers
+
+### 5.2 API Routers (6 total)
+
+| Router | Prefix | File | Endpoints |
+|--------|--------|------|-----------|
+| Dashboard | `/api/v1/dashboard` | [dashboard.py](file:///w:/level%203/Software/System/backend/app/routers/dashboard.py) | `GET /summary` |
+| Products | `/api/v1/products` | [products.py](file:///w:/level%203/Software/System/backend/app/routers/products.py) | `GET /`, `GET /{id}`, `POST /`, `PUT /{id}`, `DELETE /{id}` |
+| Stock | `/api/v1/stock` | [stock.py](file:///w:/level%203/Software/System/backend/app/routers/stock.py) | `GET /`, `POST /adjust`, `POST /transfer` |
+| Orders | `/api/v1/orders` | [orders.py](file:///w:/level%203/Software/System/backend/app/routers/orders.py) | CRUD + status management |
+| Branches | `/api/v1/branches` | [branches.py](file:///w:/level%203/Software/System/backend/app/routers/branches.py) | CRUD |
+| Users | `/api/v1/users` | [users.py](file:///w:/level%203/Software/System/backend/app/routers/users.py) | User management |
+
+### 5.3 Service Layer (3 services)
+
+| Service | File | Responsibility |
+|---------|------|---------------|
+| ProductService | [product_service.py](file:///w:/level%203/Software/System/backend/app/services/product_service.py) | Product CRUD operations |
+| StockService | [stock_service.py](file:///w:/level%203/Software/System/backend/app/services/stock_service.py) | Stock adjustment via RPC, inter-branch transfers |
+| OrderService | [order_service.py](file:///w:/level%203/Software/System/backend/app/services/order_service.py) | Order creation and status management |
+
+### 5.4 Authentication & Authorization
+
+| Component | File | Description |
+|-----------|------|-------------|
+| JWT Middleware | [middleware.py](file:///w:/level%203/Software/System/backend/app/auth/middleware.py) | Validates JWT via Supabase Auth, fetches user profile with role/branch |
+| RBAC Permissions | [permissions.py](file:///w:/level%203/Software/System/backend/app/auth/permissions.py) | [require_role()](file:///w:/level%203/Software/System/backend/app/auth/permissions.py#5-17), [require_admin()](file:///w:/level%203/Software/System/backend/app/auth/permissions.py#18-20), [require_manager()](file:///w:/level%203/Software/System/backend/app/auth/permissions.py#21-23), [require_staff()](file:///w:/level%203/Software/System/backend/app/auth/permissions.py#24-26) |
+
+**Authentication Flow:**
+1. Client sends JWT in `Authorization: Bearer <token>` header
+2. Middleware calls `supabase.auth.get_user(token)` to verify validity
+3. Fetches user profile from `profiles` table for role and branch assignment
+4. Returns user context `{id, email, role, branch_id, jwt}` to route handlers
+
+---
+
+## 6. Database Schema
+
+### 6.1 Tables (10 total)
+
+```mermaid
+erDiagram
+    categories ||--o{ products : "belongs_to"
+    suppliers ||--o{ products : "supplies"
+    products ||--o{ stock_levels : "tracked_at"
+    branches ||--o{ stock_levels : "holds"
+    stock_levels ||--o{ stock_transactions : "logs"
+    products ||--o{ order_items : "ordered"
+    orders ||--o{ order_items : "contains"
+    orders }o--|| branches : "placed_at"
+    orders }o--o| suppliers : "from"
+    profiles }o--|| branches : "assigned_to"
+```
+
+### 6.2 Key Security Features
+
+| Feature | Details |
+|---------|---------|
+| **Row-Level Security** | Enabled on all 10 tables with 32 policies |
+| **Deny-by-Default** | Unauthorized operations are silently rejected |
+| **Branch Isolation** | Staff users see only their assigned branch's data |
+| **Immutable Audit Log** | `stock_transactions` — client-side writes are blocked |
+| **Atomic Stock Updates** | `adjust_stock_level()` RPC with `SELECT ... FOR UPDATE` |
+| **Non-negative Constraint** | `CHECK (quantity >= 0)` on [stock_levels](file:///w:/level%203/Software/System/backend/app/routers/stock.py#10-19) |
+
+### 6.3 RBAC Permissions Matrix
+
+| Capability | Admin | Manager | Staff |
+|------------|:-----:|:-------:|:-----:|
+| View Dashboard | ✅ | ✅ | ✅ |
+| Manage Products | ✅ | ✅ | ❌ |
+| Quick Stock Adjustment | ✅ | ✅ | ✅ (own branch) |
+| Create / Approve Orders | ✅ | ✅ | ❌ |
+| Manage Branches | ✅ | ❌ | ❌ |
+| Manage Users & Roles | ✅ | ❌ | ❌ |
+| Export Reports | ✅ | ✅ | ❌ |
+| View Own Branch Stock | ✅ | ✅ | ✅ |
+
+### 6.4 Realtime Subscriptions
+
+| Table | Event | Frontend Use Case |
+|-------|-------|-------------------|
+| `notifications` | `INSERT` | Push toast alerts for low-stock warnings |
+| [stock_levels](file:///w:/level%203/Software/System/backend/app/routers/stock.py#10-19) | `UPDATE` | Live dashboard inventory updates |
+
+---
+
+## 7. Deployment & Configuration
+
+### 7.1 Environment Variables
+
+| Variable | Purpose |
+|----------|---------|
+| `SUPABASE_URL` | Supabase project URL |
+| `SUPABASE_ANON_KEY` | Public API key (RLS-enforced) |
+| `SUPABASE_SERVICE_ROLE_KEY` | Admin key (bypasses RLS) |
+| `DATABASE_URL` | Direct PostgreSQL connection string |
+
+### 7.2 Running the System
+
+| Component | Command |
+|-----------|---------|
+| Frontend (dev) | `npm run dev` |
+| Frontend (build) | `npm run build` |
+| Backend (dev) | `uvicorn app.main:app --reload` |
+| Database seed | `python seed_db.py` |
+
+### 7.3 Deployment Targets
+
+- **Frontend**: Vercel (configured via [vercel.json](file:///w:/level%203/Software/System/vercel.json))
+- **Backend**: Any Python hosting (Docker-ready)
+- **Database**: Supabase managed PostgreSQL
+
+---
+
+## 8. Project File Structure
+
+```
+System/
+├── src/                          # Frontend (React + TypeScript)
+│   ├── api/                      # API client + mutations
+│   ├── components/               # Reusable components (11 files)
+│   │   ├── layout/               # Header, Sidebar, Layout
+│   │   └── ui/                   # Button, Input, Table, Dropdown, Popover
+│   ├── hooks/                    # Custom React hooks
+│   ├── lib/                      # Supabase client, helpers
+│   ├── pages/                    # 8 route pages
+│   ├── types/                    # TypeScript interfaces
+│   └── App.tsx                   # Root component with routing
+├── backend/                      # Backend (FastAPI + Python)
+│   ├── app/
+│   │   ├── auth/                 # JWT middleware + RBAC permissions
+│   │   ├── routers/              # 6 API routers
+│   │   ├── services/             # 3 business logic services
+│   │   ├── models/               # Pydantic request/response schemas
+│   │   ├── db/                   # Supabase client singleton
+│   │   ├── config.py             # Environment settings
+│   │   └── main.py               # App factory + CORS
+│   ├── requirements.txt          # Python dependencies
+│   └── seed_db.py                # Database seed script
+├── implementation_plan.md        # Full technical blueprint
+├── backend_handoff.md            # Backend developer integration guide
+├── database_setup_report.md      # Database deployment report
+├── package.json                  # Frontend dependencies
+├── vite.config.ts                # Vite build configuration
+└── tailwind.config.ts            # Tailwind CSS configuration
+```
+
+---
+
+## 9. Migration History
+
+A total of **22 database migrations** have been successfully applied:
+
+| Phase | Count | Description |
+|-------|-------|-------------|
+| Extensions & Enums | 2 | `uuid-ossp`, `pgcrypto`, 4 enum types |
+| Core Tables | 8 | All 10 tables with constraints, indexes, FK relations |
+| Functions & Triggers | 2 | `update_timestamp()` trigger, `adjust_stock_level()` RPC |
+| RLS Policies | 8 | 32 policies across all tables |
+| Security Hardening | 1 | Search-path injection prevention |
+| Realtime | 1 | `notifications` and [stock_levels](file:///w:/level%203/Software/System/backend/app/routers/stock.py#10-19) publications |
+
+---
+
+## 10. Summary Statistics
+
+| Metric | Value |
+|--------|-------|
+| Frontend Pages | 8 |
+| Frontend Components | 11+ |
+| Backend API Routers | 6 |
+| Backend Services | 3 |
+| REST API Endpoints | 20+ |
+| Database Tables | 10 |
+| Database Indexes | 23 |
+| RLS Policies | 32 |
+| Database Migrations | 22 |
+| Realtime Tables | 2 |
+| User Roles | 3 (Admin, Manager, Staff) |
+
+---
+
+*End of System Report.*
