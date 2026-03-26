@@ -8,40 +8,7 @@ import { cn } from '@/lib/utils';
 import type { ColumnDef } from '@tanstack/react-table';
 import type { Branch } from '@/types/schema';
 import { toast } from 'sonner';
-
-// --- MOCK API ---
-const mockBranches: Branch[] = [
-    {
-        id: 'branch-1',
-        name: 'Main Warehouse',
-        address: '123 Logistics Way, Port City, CA 90210',
-        phone: '+1 (555) 019-8234',
-        is_active: true,
-        created_at: new Date(Date.now() - 30000000000).toISOString(),
-    },
-    {
-        id: 'branch-2',
-        name: 'Downtown Retail Store',
-        address: '456 Commerce Blvd, Metro Center, NY 10001',
-        phone: '+1 (555) 012-4455',
-        is_active: true,
-        created_at: new Date(Date.now() - 15000000000).toISOString(),
-    },
-    {
-        id: 'branch-3',
-        name: 'Westside Outlet',
-        address: '789 Sunset Strip, Westside, CA 90046',
-        phone: '+1 (555) 018-9999',
-        is_active: false,
-        created_at: new Date(Date.now() - 5000000000).toISOString(),
-    },
-];
-
-const fetchBranches = async (): Promise<Branch[]> => {
-    await new Promise((resolve) => setTimeout(resolve, 600));
-    return mockBranches;
-};
-// ----------------
+import { fetchBranches, createBranch as apiCreateBranch, updateBranch } from '@/api/services';
 
 export function BranchesPage() {
     const queryClient = useQueryClient();
@@ -53,19 +20,7 @@ export function BranchesPage() {
     });
 
     const addMutation = useMutation({
-        mutationFn: async (data: Partial<Branch>) => {
-            await new Promise((resolve) => setTimeout(resolve, 800));
-            const newBranch: Branch = {
-                id: `branch-new-${Date.now()}`,
-                name: data.name!,
-                address: data.address || null,
-                phone: data.phone || null,
-                is_active: true,
-                created_at: new Date().toISOString(),
-            };
-            mockBranches.push(newBranch);
-            return newBranch;
-        },
+        mutationFn: (data: { name: string; address?: string; phone?: string }) => apiCreateBranch(data),
         onSuccess: () => {
             toast.success('Branch location added successfully');
             queryClient.invalidateQueries({ queryKey: ['branches'] });
@@ -75,18 +30,11 @@ export function BranchesPage() {
     });
 
     const toggleStatusMutation = useMutation({
-        mutationFn: async (branch: Branch) => {
-            await new Promise((resolve) => setTimeout(resolve, 400));
-            // Mutate mock data so it persists in the session
-            const target = mockBranches.find(b => b.id === branch.id);
-            if (target) target.is_active = !target.is_active;
-            return { ...branch, is_active: !branch.is_active };
-        },
-        onSuccess: (updatedBranch) => {
-            toast.success(`${updatedBranch.name} is now ${updatedBranch.is_active ? 'Active' : 'Inactive'}`);
+        mutationFn: (branch: Branch) => updateBranch(branch.id, { is_active: !branch.is_active }),
+        onSuccess: (_data, branch) => {
+            toast.success(`${branch.name} is now ${!branch.is_active ? 'Active' : 'Inactive'}`);
             queryClient.invalidateQueries({ queryKey: ['branches'] });
         },
-        // Optimistic UI could be added here, but leaving simple for brevity
     });
 
     const columns: ColumnDef<Branch>[] = [
@@ -164,9 +112,9 @@ export function BranchesPage() {
                 <div className="flex-1 min-h-0 relative z-10">
                     <DataTable
                         columns={columns}
-                        data={branches ?? []}
+                        data={(branches as Branch[]) ?? []}
                         pageCount={1}
-                        totalElements={branches?.length || 0}
+                        totalElements={(branches as Branch[])?.length || 0}
                         pagination={{ pageIndex: 0, pageSize: 10 }}
                         onPaginationChange={() => { }}
                         sorting={[]}

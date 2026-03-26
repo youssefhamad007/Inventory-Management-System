@@ -8,59 +8,7 @@ import { cn } from '@/lib/utils';
 import type { ColumnDef } from '@tanstack/react-table';
 import type { Product } from '@/types/schema';
 import { toast } from 'sonner';
-
-// --- MOCK API ---
-const mockProducts: Product[] = Array.from({ length: 145 }, (_, i) => ({
-    id: `prod-${i}`,
-    sku: `SKU-${20000 + i}`,
-    barcode: `BC-${i}`,
-    name: `Pro Inventory Item ${i + 1}`,
-    description: 'High quality item for retail.',
-    category_id: null,
-    supplier_id: null,
-    unit_price: Number((Math.random() * 100).toFixed(2)),
-    cost_price: Number((Math.random() * 50).toFixed(2)),
-    min_stock_level: 10,
-    image_url: null,
-    is_active: Math.random() > 0.1,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-    // Mock joined category for display
-    category: {
-        id: 'cat-1',
-        name: ['Electronics', 'Home Goods', 'Apparel', 'Office'][Math.floor(Math.random() * 4)],
-        description: null,
-        created_at: new Date().toISOString(),
-    },
-}));
-
-const fetchProducts = async (): Promise<Product[]> => {
-    await new Promise((resolve) => setTimeout(resolve, 600)); // Simulate network
-    return mockProducts;
-};
-
-const createProduct = async (newProduct: Partial<Product>): Promise<Product> => {
-    await new Promise((resolve) => setTimeout(resolve, 800)); // Simulate network
-    const product: Product = {
-        id: `prod-new-${Date.now()}`,
-        sku: newProduct.sku || `SKU-NEW-${Date.now()}`,
-        barcode: null,
-        name: newProduct.name || 'New Product',
-        description: '',
-        category_id: null,
-        supplier_id: null,
-        unit_price: newProduct.unit_price || 0,
-        cost_price: 0,
-        min_stock_level: 10,
-        image_url: null,
-        is_active: true,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-    };
-    mockProducts.unshift(product);
-    return product;
-};
-// ----------------
+import { fetchProducts, createProduct as apiCreateProduct } from '@/api/services';
 
 const columns: ColumnDef<Product>[] = [
     { accessorKey: 'sku', header: 'SKU' },
@@ -73,7 +21,7 @@ const columns: ColumnDef<Product>[] = [
     {
         accessorKey: 'unit_price',
         header: 'Price',
-        cell: ({ row }) => `$${row.original.unit_price.toFixed(2)}`,
+        cell: ({ row }) => `$${Number(row.original.unit_price).toFixed(2)}`,
     },
     {
         accessorKey: 'is_active',
@@ -97,19 +45,19 @@ export function ProductsPage() {
 
     const { data: products, isLoading } = useQuery({
         queryKey: ['products'],
-        queryFn: fetchProducts,
+        queryFn: () => fetchProducts(),
     });
 
-    // Mock mutation for product creation
     const mutation = useMutation({
-        mutationFn: createProduct,
+        mutationFn: (product: { name: string; sku: string; unit_price: number }) =>
+            apiCreateProduct({ ...product, cost_price: 0, min_stock_level: 10 }),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['products'] });
             setIsSlideOverOpen(false);
             toast.success('Product created successfully');
         },
-        onError: () => {
-            toast.error('Failed to create product');
+        onError: (err: Error) => {
+            toast.error(err.message || 'Failed to create product');
         }
     });
 
@@ -123,13 +71,12 @@ export function ProductsPage() {
         });
     };
 
-    // Client-side filtering and slicing since we rely on mock data entirely
     const filteredData = React.useMemo(() => {
         if (!products) return [];
-        let filtered = products;
+        let filtered = products as Product[];
         if (globalFilter) {
             const lowerFilter = globalFilter.toLowerCase();
-            filtered = filtered.filter(p =>
+            filtered = filtered.filter((p: Product) =>
                 p.name.toLowerCase().includes(lowerFilter) ||
                 p.sku.toLowerCase().includes(lowerFilter)
             );
@@ -201,7 +148,7 @@ export function ProductsPage() {
                         "fixed inset-y-0 right-0 z-50 w-full max-w-sm border-l border-white/10 bg-black/95 backdrop-blur-2xl shadow-[[-20px_0_50px_rgba(0,0,0,0.5)]] transition-transform duration-300 ease-in-out p-6 flex flex-col",
                         isSlideOverOpen ? "translate-x-0" : "translate-x-full"
                     )}
-                    onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside
+                    onClick={(e) => e.stopPropagation()}
                 >
                     <div className="flex items-center justify-between mb-8">
                         <h2 className="text-xl font-semibold">New Product</h2>

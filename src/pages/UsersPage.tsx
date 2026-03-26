@@ -5,52 +5,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { ColumnDef } from '@tanstack/react-table';
 import type { Profile } from '@/types/schema';
-
-// --- MOCK API ---
-const mockUsers: Profile[] = [
-    {
-        id: 'user-auth-1',
-        full_name: 'Sarah Connor',
-        avatar_url: null,
-        branch_id: null,
-        role: 'admin',
-        is_active: true,
-        created_at: new Date(Date.now() - 10000000000).toISOString(),
-    },
-    {
-        id: 'user-auth-2',
-        full_name: 'John Smith',
-        avatar_url: null,
-        branch_id: 'branch-1',
-        role: 'manager',
-        is_active: true,
-        created_at: new Date(Date.now() - 8000000000).toISOString(),
-    },
-    {
-        id: 'user-auth-3',
-        full_name: 'Emily Davis',
-        avatar_url: null,
-        branch_id: 'branch-1',
-        role: 'staff',
-        is_active: true,
-        created_at: new Date(Date.now() - 5000000000).toISOString(),
-    },
-    {
-        id: 'user-auth-4',
-        full_name: 'Michael Chang',
-        avatar_url: null,
-        branch_id: 'branch-2',
-        role: 'staff',
-        is_active: false,
-        created_at: new Date(Date.now() - 2000000000).toISOString(),
-    }
-];
-
-const fetchUsers = async (): Promise<Profile[]> => {
-    await new Promise((resolve) => setTimeout(resolve, 600));
-    return mockUsers;
-};
-// ----------------
+import { fetchUsers } from '@/api/services';
 
 const getRoleIcon = (role: string) => {
     switch (role) {
@@ -131,9 +86,9 @@ export function UsersPage() {
                 <div className="flex-1 min-h-0 relative z-10">
                     <DataTable
                         columns={columns}
-                        data={users ?? []}
+                        data={(users as Profile[]) ?? []}
                         pageCount={1}
-                        totalElements={users?.length || 0}
+                        totalElements={(users as Profile[])?.length || 0}
                         pagination={{ pageIndex: 0, pageSize: 10 }}
                         onPaginationChange={() => { }}
                         sorting={[]}

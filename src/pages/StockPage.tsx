@@ -8,54 +8,26 @@ import { Button } from '@/components/ui/button';
 import { Box } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { TransferStockModal } from '@/components/TransferStockModal';
-
-// Mock Fetcher for demonstration
-const fetchStockLevels = async (): Promise<StockLevel[]> => {
-    await new Promise((res) => setTimeout(res, 500));
-    return [
-        {
-            id: 'uuid-1',
-            product_id: 'prod-1',
-            branch_id: 'branch-1',
-            quantity: 120,
-            updated_at: new Date().toISOString(),
-            product: {
-                id: 'prod-1',
-                sku: 'SKU-1001',
-                name: 'Ergonomic Office Chair',
-                unit_price: 199.99,
-                cost_price: 100,
-                min_stock_level: 50,
-                is_active: true,
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString(),
-                barcode: null,
-                description: null,
-                category_id: null,
-                supplier_id: null,
-                image_url: null,
-            },
-        }
-    ];
-};
+import { fetchStockLevels } from '@/api/services';
+import { useAuth } from '@/contexts/AuthContext';
 
 export function StockPage() {
+    const { user } = useAuth();
     const { data, isLoading } = useQuery({
         queryKey: ['stock'],
-        queryFn: fetchStockLevels,
+        queryFn: () => fetchStockLevels(),
     });
 
     const [isTransferModalOpen, setIsTransferModalOpen] = React.useState(false);
 
-    const { mutate: adjustStock, isPending } = useAdjustStockMutation();
+    const { mutate: adjustStockMutate, isPending } = useAdjustStockMutation();
 
     const handleQuickAdjust = (row: StockLevel, change: number) => {
-        adjustStock({
+        adjustStockMutate({
             product_id: row.product_id,
             branch_id: row.branch_id,
             quantity_change: change,
             txn_type: change > 0 ? 'adjustment_in' : 'adjustment_out',
-            performed_by: 'current-user-uuid',
             notes: 'Quick adjust from UI',
         });
     };
@@ -88,49 +60,19 @@ export function StockPage() {
         },
         {
             id: 'actions',
-            header: 'Quick Adjust (Optimistic)',
+            header: 'Quick Adjust',
             cell: ({ row }) => {
                 return (
                     <div className="flex items-center space-x-1.5 bg-muted/50 p-1 rounded-lg w-max border">
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 px-2 hover:bg-destructive/10 hover:text-destructive shrink-0"
-                            onClick={() => handleQuickAdjust(row.original, -10)}
-                            disabled={isPending || row.original.quantity < 10}
-                        >
-                            -10
-                        </Button>
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 px-2 hover:bg-destructive/10 hover:text-destructive shrink-0"
-                            onClick={() => handleQuickAdjust(row.original, -1)}
-                            disabled={isPending || row.original.quantity < 1}
-                        >
-                            -1
-                        </Button>
-
+                        <Button variant="ghost" size="sm" className="h-8 px-2 hover:bg-destructive/10 hover:text-destructive shrink-0"
+                            onClick={() => handleQuickAdjust(row.original, -10)} disabled={isPending || row.original.quantity < 10}>-10</Button>
+                        <Button variant="ghost" size="sm" className="h-8 px-2 hover:bg-destructive/10 hover:text-destructive shrink-0"
+                            onClick={() => handleQuickAdjust(row.original, -1)} disabled={isPending || row.original.quantity < 1}>-1</Button>
                         <div className="w-px h-6 bg-border mx-1" />
-
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 px-2 hover:bg-emerald-500/10 hover:text-emerald-500 shrink-0"
-                            onClick={() => handleQuickAdjust(row.original, 1)}
-                            disabled={isPending}
-                        >
-                            +1
-                        </Button>
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 px-2 hover:bg-emerald-500/10 hover:text-emerald-500 shrink-0"
-                            onClick={() => handleQuickAdjust(row.original, 10)}
-                            disabled={isPending}
-                        >
-                            +10
-                        </Button>
+                        <Button variant="ghost" size="sm" className="h-8 px-2 hover:bg-emerald-500/10 hover:text-emerald-500 shrink-0"
+                            onClick={() => handleQuickAdjust(row.original, 1)} disabled={isPending}>+1</Button>
+                        <Button variant="ghost" size="sm" className="h-8 px-2 hover:bg-emerald-500/10 hover:text-emerald-500 shrink-0"
+                            onClick={() => handleQuickAdjust(row.original, 10)} disabled={isPending}>+10</Button>
                     </div>
                 );
             },
@@ -159,7 +101,7 @@ export function StockPage() {
                 <div className="flex-1 min-h-0 relative z-10">
                     <DataTable
                         columns={columns}
-                        data={data ?? []}
+                        data={(data as StockLevel[]) ?? []}
                         pageCount={1}
                         isLoading={isLoading}
                         pagination={{ pageIndex: 0, pageSize: 10 }}
