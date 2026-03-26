@@ -1,11 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException
 from app.db.supabase import get_supabase_client, get_admin_client
-from app.auth.permissions import require_admin, require_manager, require_staff
+from app.auth.permissions import require_admin, require_manager
 
 router = APIRouter()
 
 @router.get("/")
-async def list_branches(user=Depends(require_staff())):
+async def list_branches(user=Depends(require_manager())):
     supabase = get_supabase_client()
     result = supabase.table("branches").select("*").execute()
     return result.data

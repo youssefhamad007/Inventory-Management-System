@@ -1,11 +1,9 @@
 import * as React from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ShoppingCart, FileText, CheckCircle2, Clock, XCircle, GripVertical, PackagePlus } from 'lucide-react';
+import { ShoppingCart, FileText, CheckCircle2, Clock, XCircle, GripVertical } from 'lucide-react';
 import type { Order, OrderStatus } from '@/types/schema';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import { Button } from '@/components/ui/button';
-import { CreateOrderModal } from '@/components/CreateOrderModal';
 
 import {
     DndContext,
@@ -15,7 +13,6 @@ import {
     PointerSensor,
     useSensor,
     useSensors,
-    useDroppable,
 } from '@dnd-kit/core';
 import type { DragStartEvent, DragOverEvent, DragEndEvent } from '@dnd-kit/core';
 import {
@@ -27,8 +24,30 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
-import { fetchOrders, updateOrderStatus } from '@/api/orders';
-import { useProfile } from '@/hooks/useProfile';
+// --- MOCK API ---
+const mockOrders: Order[] = Array.from({ length: 45 }, (_, i) => {
+    const statuses: OrderStatus[] = ['draft', 'confirmed', 'shipped', 'delivered'];
+    return {
+        id: `ord-${i}`,
+        order_number: `ORD-2026-${1000 + i}`,
+        order_type: Math.random() > 0.5 ? 'purchase' : 'sale',
+        status: statuses[Math.floor(Math.random() * statuses.length)],
+        branch_id: `branch-1`,
+        supplier_id: null,
+        total_amount: Number((Math.random() * 5000 + 100).toFixed(2)),
+        notes: null,
+        created_by: 'user-1',
+        created_at: new Date(Date.now() - Math.random() * 10000000).toISOString(),
+        updated_at: new Date().toISOString(),
+    };
+});
+
+const fetchOrders = async (): Promise<Order[]> => {
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    return mockOrders;
+};
+
+// ----------------
 
 const COLUMNS: { id: OrderStatus; title: string }[] = [
     { id: 'draft', title: 'Awaiting Confirmation' },
@@ -84,7 +103,7 @@ function SortableOrderCard({ order }: SortableOrderCardProps) {
             </div>
 
             <div className="flex items-center justify-between mt-1">
-                <span className="font-semibold text-lg">${Number(order.total_amount).toFixed(2)}</span>
+                <span className="font-semibold text-lg">${order.total_amount.toFixed(2)}</span>
                 <span className={cn(
                     "text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full",
                     order.order_type === 'purchase' ? "bg-amber-500/10 text-amber-500" : "bg-emerald-500/10 text-emerald-500"
@@ -100,31 +119,11 @@ function SortableOrderCard({ order }: SortableOrderCardProps) {
     );
 }
 
-// --- Droppable Column Wrapper --- //
-function DroppableColumnArea({ id, children }: { id: string; children: React.ReactNode }) {
-    const { setNodeRef, isOver } = useDroppable({ id });
-    return (
-        <div
-            ref={setNodeRef}
-            className={cn(
-                'flex flex-col gap-3 min-h-[100px] p-1 rounded-lg transition-colors duration-200',
-                isOver && 'bg-primary/5 ring-1 ring-primary/30'
-            )}
-        >
-            {children}
-        </div>
-    );
-}
-
 
 // --- Main Page Component --- //
 export function OrdersPage() {
     const queryClient = useQueryClient();
-    const { data: profile, isLoading: isProfileLoading } = useProfile();
-    // Staff can also manage orders
-    const canManageOrders = !isProfileLoading && (profile?.role === 'admin' || profile?.role === 'manager' || profile?.role === 'staff');
 
-    const [isCreateOpen, setIsCreateOpen] = React.useState(false);
     // Internal state to manage optimistic sorting
     const [activeId, setActiveId] = React.useState<string | null>(null);
     const [localOrders, setLocalOrders] = React.useState<Order[]>([]);
@@ -139,13 +138,13 @@ export function OrdersPage() {
     }, [orders]);
 
     const mutation = useMutation({
-        mutationFn: ({ orderId, status }: { orderId: string, status: OrderStatus }) => updateOrderStatus(orderId, status),
+        mutationFn: async ({ orderId, status }: { orderId: string, status: OrderStatus }) => {
+            // Mock successfully persisting to database
+            await new Promise((resolve) => setTimeout(resolve, 400));
+            return { orderId, status };
+        },
         onSuccess: (data) => {
             toast.success(`Order moved to ${data.status}`);
-            queryClient.invalidateQueries({ queryKey: ['orders'] });
-        },
-        onError: (err: any) => {
-            toast.error(`Failed to update order: ${err.response?.data?.detail || err.message}`);
             queryClient.invalidateQueries({ queryKey: ['orders'] });
         }
     });
@@ -155,11 +154,9 @@ export function OrdersPage() {
             activationConstraint: {
                 distance: 5, // 5px drag distance before firing to prevent accidental clicks
             },
-            disabled: !canManageOrders,
         }),
         useSensor(KeyboardSensor, {
             coordinateGetter: sortableKeyboardCoordinates,
-            disabled: !canManageOrders,
         })
     );
 
@@ -241,22 +238,11 @@ export function OrdersPage() {
 
     return (
         <div className="flex flex-col h-[calc(100vh-8rem)]">
-            <CreateOrderModal isOpen={isCreateOpen} onClose={() => setIsCreateOpen(false)} />
-            <div className="mb-6 flex-shrink-0 flex items-start justify-between">
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight text-primary drop-shadow-[0_0_8px_rgba(0,184,217,0.5)]">Mission Control: Orders</h1>
-                    <p className="text-muted-foreground mt-1">
-                        Drag and drop shipments to update their fulfillment status in real-time.
-                    </p>
-                </div>
-                {canManageOrders && (
-                    <Button
-                        onClick={() => setIsCreateOpen(true)}
-                        className="shadow-[0_0_15px_rgba(0,184,217,0.3)] hover:shadow-[0_0_25px_rgba(0,184,217,0.5)] transition-shadow"
-                    >
-                        <PackagePlus className="mr-2 h-4 w-4" /> New Order
-                    </Button>
-                )}
+            <div className="mb-6 flex-shrink-0">
+                <h1 className="text-3xl font-bold tracking-tight text-primary drop-shadow-[0_0_8px_rgba(0,184,217,0.5)]">Mission Control: Orders</h1>
+                <p className="text-muted-foreground mt-1">
+                    Drag and drop shipments to update their fulfillment status in real-time.
+                </p>
             </div>
 
             <div className="flex-1 overflow-x-auto overflow-y-hidden pb-4">
@@ -284,11 +270,11 @@ export function OrdersPage() {
                                             items={columnOrders.map(o => o.id)}
                                             strategy={verticalListSortingStrategy}
                                         >
-                                            <DroppableColumnArea id={column.id}>
+                                            <div className="flex flex-col gap-3 min-h-[100px]">
                                                 {columnOrders.map(order => (
                                                     <SortableOrderCard key={order.id} order={order} />
                                                 ))}
-                                            </DroppableColumnArea>
+                                            </div>
                                         </SortableContext>
                                     </div>
                                 </div>

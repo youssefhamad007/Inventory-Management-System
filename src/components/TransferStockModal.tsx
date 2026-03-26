@@ -2,11 +2,8 @@ import * as React from 'react';
 import { X, Loader2, ArrowRightLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { transferStock } from '@/api/stock';
-import { fetchBranches } from '@/api/branches';
-import { fetchProducts } from '@/api/products';
 
 interface TransferStockModalProps {
     isOpen: boolean;
@@ -16,26 +13,19 @@ interface TransferStockModalProps {
 export function TransferStockModal({ isOpen, onClose }: TransferStockModalProps) {
     const queryClient = useQueryClient();
 
-    const { data: branches } = useQuery({ queryKey: ['branches'], queryFn: fetchBranches });
-    const { data: products } = useQuery({ queryKey: ['products'], queryFn: fetchProducts });
-
+    // Mock mutation for transferring stock
     const transferMutation = useMutation({
         mutationFn: async (data: { source: string, dest: string, product: string, quantity: number }) => {
-            return await transferStock({
-                from_branch_id: data.source,
-                to_branch_id: data.dest,
-                product_id: data.product,
-                quantity: data.quantity
-            });
+            await new Promise((resolve) => setTimeout(resolve, 1000));
+            return data;
         },
         onSuccess: () => {
             toast.success('Stock transferred successfully!');
             queryClient.invalidateQueries({ queryKey: ['stock'] });
             onClose();
         },
-        onError: (err: any) => {
-            const detail = err.response?.data?.detail;
-            toast.error(detail ? `Transfer Failed: ${detail}` : 'Failed to transfer stock.');
+        onError: () => {
+            toast.error('Failed to transfer stock.');
         }
     });
 
@@ -70,19 +60,8 @@ export function TransferStockModal({ isOpen, onClose }: TransferStockModalProps)
 
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div className="space-y-2">
-                        <label htmlFor="product" className="text-sm font-medium">Product</label>
-                        <select
-                            id="product"
-                            name="product"
-                            required
-                            defaultValue=""
-                            className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                        >
-                            <option className="bg-background text-foreground" value="" disabled>Select a product...</option>
-                            {products?.map(p => (
-                                <option key={p.id} className="bg-background text-foreground" value={p.id}>{p.name} ({p.sku})</option>
-                            ))}
-                        </select>
+                        <label htmlFor="product" className="text-sm font-medium">Product SKU</label>
+                        <Input id="product" name="product" required placeholder="e.g. SKU-1001" />
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
@@ -92,13 +71,11 @@ export function TransferStockModal({ isOpen, onClose }: TransferStockModalProps)
                                 id="sourceBranch"
                                 name="sourceBranch"
                                 required
-                                defaultValue=""
                                 className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                             >
-                                <option className="bg-background text-foreground" value="" disabled>Select...</option>
-                                {branches?.map(b => (
-                                    <option key={`src-${b.id}`} className="bg-background text-foreground" value={b.id}>{b.name}</option>
-                                ))}
+                                <option value="" disabled selected>Select...</option>
+                                <option value="branch-1">Main Warehouse</option>
+                                <option value="branch-2">Downtown Store</option>
                             </select>
                         </div>
                         <div className="space-y-2">
@@ -107,13 +84,11 @@ export function TransferStockModal({ isOpen, onClose }: TransferStockModalProps)
                                 id="destBranch"
                                 name="destBranch"
                                 required
-                                defaultValue=""
                                 className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                             >
-                                <option className="bg-background text-foreground" value="" disabled>Select...</option>
-                                {branches?.map(b => (
-                                    <option key={`dst-${b.id}`} className="bg-background text-foreground" value={b.id}>{b.name}</option>
-                                ))}
+                                <option value="" disabled selected>Select...</option>
+                                <option value="branch-2">Downtown Store</option>
+                                <option value="branch-1">Main Warehouse</option>
                             </select>
                         </div>
                     </div>

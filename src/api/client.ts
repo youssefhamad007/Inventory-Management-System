@@ -1,8 +1,7 @@
 import axios from 'axios';
-import { supabase } from '@/lib/supabase';
 
 // The base URL for the backend API, driven by environment variables.
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -13,11 +12,11 @@ export const apiClient = axios.create({
 
 // Request Interceptor: Attach Auth Token
 apiClient.interceptors.request.use(
-  async (config) => {
-    // Integrate with Supabase session using the shared client
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session?.access_token) {
-      config.headers.Authorization = `Bearer ${session.access_token}`;
+  (config) => {
+    // Integrate with Supabase session or other auth mechanisms
+    const token = localStorage.getItem('supabase-auth-token'); 
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
   },
@@ -27,15 +26,10 @@ apiClient.interceptors.request.use(
 // Response Interceptor: Global error handling
 apiClient.interceptors.response.use(
   (response) => response,
-  async (error) => {
-    // Handle specific status codes consistently (e.g., 401 Unauthorized -> clear token)
+  (error) => {
+    // Handle specific status codes consistently (e.g., 401 Unauthorized -> redirect)
     if (error.response?.status === 401) {
-      console.warn('Unauthorized access - Cleared local cache and redirecting to login');
-      await supabase.auth.signOut();
-      // Forcefully refresh and mount the router at the login page
-      if (window.location.pathname !== '/login') {
-        window.location.href = '/login';
-      }
+      console.warn('Unauthorized access - Handle logout/redirect here');
     }
     return Promise.reject(error);
   }

@@ -28,7 +28,6 @@ class OrderItemResponse(OrderItemBase):
     id: UUID
     order_id: UUID
     subtotal: Decimal
-    product: Optional[dict] = None
 
 class OrderBase(BaseModel):
     order_number: str
@@ -52,7 +51,5 @@ class OrderResponse(OrderBase):
     created_at: datetime
     updated_at: datetime
     items: List[OrderItemResponse] = []
-    branch: Optional[dict] = None
-    supplier: Optional[dict] = None
 
     model_config = ConfigDict(from_attributes=True)
