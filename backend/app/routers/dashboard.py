@@ -49,9 +49,11 @@ async def get_dashboard_summary(
     summary="Get analytics charts telemetry",
     description=(
         "Return stock movement matrix by product category and live aggregated valuation metrics.\n\n"
-        "- **Roles**: Open for testing"
+        "- **Roles**: Admin, Manager, and Staff"
     ),
 )
-async def get_dashboard_analytics() -> dict:
+async def get_dashboard_analytics(
+    user: UserContext = Depends(require_staff())
+) -> dict:
     return DashboardService.get_analytics()
 

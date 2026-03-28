@@ -30,11 +30,6 @@ async def health_check():
 async def list_routes():
     return [{"path": route.path, "name": route.name} for route in app.routes]
 
-from app.services.dashboard_service import DashboardService
-@app.get("/api/v1/dashboard/analytics")
-async def direct_get_analytics():
-    return DashboardService.get_analytics()
-
 # Include routers
 app.include_router(dashboard.router, prefix="/api/v1/dashboard", tags=["Dashboard"])
 app.include_router(products.router, prefix="/api/v1/products", tags=["Products"])
