@@ -1,4 +1,5 @@
 import { apiClient } from './client';
+import type { StockLevel } from '@/types/schema';
 
 // ─── Dashboard ───────────────────────────────────
 export async function fetchDashboardSummary() {
@@ -58,7 +59,7 @@ export async function deleteProduct(id: string) {
 }
 
 // ─── Stock ───────────────────────────────────────
-export async function fetchStockLevels(params?: { branch_id?: string; product_id?: string }) {
+export async function fetchStockLevels(params?: { branch_id?: string; product_id?: string }): Promise<StockLevel[]> {
   const { data } = await apiClient.get('/v1/stock', { params });
   return data;
 }

@@ -8,45 +8,16 @@ import { Button } from '@/components/ui/button';
 import { Box } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { TransferStockModal } from '@/components/TransferStockModal';
-<<<<<<< HEAD
-import { fetchStockLevels } from '@/api/services';
-=======
 
-// Mock Fetcher for demonstration
-const fetchStockLevels = async (): Promise<StockLevel[]> => {
-    await new Promise((res) => setTimeout(res, 500));
-    return [
-        {
-            id: 'uuid-1',
-            product_id: 'prod-1',
-            branch_id: 'branch-1',
-            quantity: 120,
-            updated_at: new Date().toISOString(),
-            product: {
-                id: 'prod-1',
-                sku: 'SKU-1001',
-                name: 'Ergonomic Office Chair',
-                unit_price: 199.99,
-                cost_price: 100,
-                min_stock_level: 50,
-                is_active: true,
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString(),
-                barcode: null,
-                description: null,
-                category_id: null,
-                supplier_id: null,
-                image_url: null,
-            },
-        }
-    ];
-};
->>>>>>> parent of 2fc8efe (feat: Initialize full-stack application with core pages, authentication, routing, and backend API setup.)
+import { fetchStockLevels } from '@/api/services';
+
+
+
 
 export function StockPage() {
-    const { data, isLoading } = useQuery({
+    const { data, isLoading } = useQuery<StockLevel[]>({
         queryKey: ['stock'],
-        queryFn: fetchStockLevels,
+        queryFn: () => fetchStockLevels(),
     });
 
     const [isTransferModalOpen, setIsTransferModalOpen] = React.useState(false);
