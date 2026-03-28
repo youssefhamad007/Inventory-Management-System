@@ -26,7 +26,6 @@ export function useRealtimeNotifications() {
                     schema: 'public',
                     table: 'inventory',
                 },
-<<<<<<< HEAD
                 (payload: any) => {
                     console.log('Realtime stock change received:', payload);
                     queryClient.invalidateQueries({ queryKey: ['stock'] });
@@ -43,18 +42,6 @@ export function useRealtimeNotifications() {
                 (payload: any) => {
                     console.log('Realtime notification received:', payload);
                     queryClient.invalidateQueries({ queryKey: ['notifications'] });
-=======
-                (payload) => {
-                    console.log('Realtime inventory change received:', payload);
-
-                    // Invalidate relevant queries to fetch fresh data
-                    queryClient.invalidateQueries({ queryKey: ['inventory'] });
-                    queryClient.invalidateQueries({ queryKey: ['low-stock-alerts'] });
-
-                    // Further logic could go here:
-                    // Examples: Dispatch a toast notification to the user,
-                    // optimistically update the query cache, etc.
->>>>>>> parent of 2fc8efe (feat: Initialize full-stack application with core pages, authentication, routing, and backend API setup.)
                 }
             )
             .subscribe((status: string) => {
