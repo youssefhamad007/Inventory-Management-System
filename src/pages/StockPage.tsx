@@ -8,7 +8,6 @@ import { Button } from '@/components/ui/button';
 import { Box } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { TransferStockModal } from '@/components/TransferStockModal';
-
 import { fetchStockLevels } from '@/api/services';
 
 
