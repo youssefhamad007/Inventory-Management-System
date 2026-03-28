@@ -34,18 +34,28 @@ export function StockPage() {
         {
             accessorKey: 'product.sku',
             header: 'SKU',
-            cell: ({ row }) => <span className="font-mono text-xs">{row.original.product?.sku}</span>
+            cell: ({ row }) => {
+                const product = row.original.product || (row.original as any).products;
+                const sku = Array.isArray(product) ? product[0]?.sku : product?.sku;
+                return <span className="font-mono text-xs">{sku || 'N/A'}</span>
+            }
         },
         {
             accessorKey: 'product.name',
             header: 'Product Name',
-            cell: ({ row }) => <span className="font-medium">{row.original.product?.name}</span>
+            cell: ({ row }) => {
+                const product = row.original.product || (row.original as any).products;
+                const name = Array.isArray(product) ? product[0]?.name : product?.name;
+                return <span className="font-medium">{name || 'Unknown Item'}</span>
+            }
         },
         {
             accessorKey: 'quantity',
             header: 'Current Quantity',
             cell: ({ row }) => {
-                const isLowStock = row.original.quantity <= (row.original.product?.min_stock_level || 0);
+                const product = row.original.product || (row.original as any).products;
+                const effectiveProduct = Array.isArray(product) ? product[0] : product;
+                const isLowStock = row.original.quantity <= (effectiveProduct?.min_stock_level || 0);
                 return (
                     <span className={cn(
                         "font-bold text-lg px-2.5 py-1 rounded-md",

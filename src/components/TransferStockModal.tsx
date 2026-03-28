@@ -94,11 +94,15 @@ export function TransferStockModal({ isOpen, onClose }: TransferStockModalProps)
                             className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                             <option value="">{stockLoading ? 'Loading stock...' : 'Select product SKU...'}</option>
-                            {stock?.map((row: any) => (
-                                <option key={row.id} value={row.product_id}>
-                                    {row.product?.name || 'Unknown'} ({row.product?.sku || 'N/A'})
-                                </option>
-                            ))}
+                            {stock?.map((row: any) => {
+                                const p = row.product || row.products;
+                                const product = Array.isArray(p) ? p[0] : p;
+                                return (
+                                    <option key={row.id} value={row.product_id}>
+                                        {product?.name || 'Unknown'} ({product?.sku || 'N/A'})
+                                    </option>
+                                );
+                            })}
                         </select>
                     </div>
 
