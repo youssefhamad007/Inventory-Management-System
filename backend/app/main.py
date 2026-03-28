@@ -32,7 +32,7 @@ async def health_check_root():
     return {"status": "healthy", "layer": "root"}
 
 # Unified V1 Router
-v1_router = APIRouter(prefix="/api/v1")
+v1_router = APIRouter()
 
 v1_router.include_router(dashboard.router, prefix="/dashboard", tags=["Dashboard"])
 v1_router.include_router(products.router, prefix="/products", tags=["Products"])
@@ -42,7 +42,6 @@ v1_router.include_router(branches.router, prefix="/branches", tags=["Branches"])
 v1_router.include_router(users.router, prefix="/users", tags=["Users"])
 v1_router.include_router(notifications.router, prefix="/notifications", tags=["Notifications"])
 
-app.include_router(v1_router)
-
-# Also support without /api prefix just in case of rewrite logic variations
-app.include_router(v1_router, prefix="/alt") # Extra prefix for debugging if needed
+# Include under both potential prefixes to handle Vercel routing logic
+app.include_router(v1_router, prefix="/api/v1")
+app.include_router(v1_router, prefix="/v1")

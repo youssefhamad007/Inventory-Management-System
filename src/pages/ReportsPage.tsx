@@ -14,7 +14,7 @@ export function ReportsPage() {
     const { data: analytics, isLoading } = useQuery<AnalyticsData>({
         queryKey: ['analytics'],
         queryFn: async () => {
-            const res = await apiClient.get('/dashboard/analytics');
+            const res = await apiClient.get('dashboard/analytics');
             return res.data;
         }
     });
@@ -86,7 +86,7 @@ export function ReportsPage() {
                         <TrendingUp className="h-5 w-5 text-blue-500" />
                         30-Day Valuation Pulse
                     </h3>
-                    <div className="h-[350px] w-full relative z-10 overflow-hidden rounded-xl border border-white/5 bg-black/20">
+                    <div className="h-[350px] w-full relative z-10 overflow-hidden rounded-xl border border-white/5 bg-black/20 min-h-[350px]">
                         <ResponsiveContainer width="100%" height="100%" minHeight={350}>
                             <AreaChart data={analytics?.valuation_trend} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                                 <defs>
@@ -115,7 +115,7 @@ export function ReportsPage() {
                         <Package className="h-5 w-5 text-emerald-500" />
                         Categorical Volume Split
                     </h3>
-                    <div className="h-[350px] w-full relative z-10 overflow-hidden rounded-xl border border-white/5 bg-black/20">
+                    <div className="h-[350px] w-full relative z-10 overflow-hidden rounded-xl border border-white/5 bg-black/20 min-h-[350px]">
                         <ResponsiveContainer width="100%" height="100%" minHeight={350}>
                             <BarChart data={analytics?.stock_movement}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
