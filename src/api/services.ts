@@ -2,13 +2,23 @@ import { apiClient } from './client';
 
 // ─── Dashboard ───────────────────────────────────
 export async function fetchDashboardSummary() {
-  const { data } = await apiClient.get('/v1/dashboard/summary');
-  return data;
+  try {
+    const { data } = await apiClient.get('/v1/dashboard/summary');
+    return data;
+  } catch (error) {
+    console.error('API Error [fetchDashboardSummary]:', error);
+    throw error;
+  }
 }
 
 export async function fetchAnalytics() {
-  const { data } = await apiClient.get('/v1/dashboard/analytics');
-  return data;
+  try {
+    const { data } = await apiClient.get('/v1/dashboard/analytics');
+    return data;
+  } catch (error) {
+    console.error('API Error [fetchAnalytics]:', error);
+    throw error;
+  }
 }
 
 // ─── Products ────────────────────────────────────
