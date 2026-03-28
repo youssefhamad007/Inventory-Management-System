@@ -10,18 +10,18 @@ from app.db.supabase import get_supabase_client
 class DashboardService:
     @staticmethod
     def get_summary() -> Dict[str, Any]:
-        supabase = get_supabase_client()
+        supabase = get_admin_client()
 
         # Total inventory value: manual aggregation since RPC doesn't exist
-        stock_result = supabase.table("stock_levels").select("quantity, product_id, product:products(unit_price)").execute()
+        stock_result = supabase.table("stock_levels").select("quantity, product_id, product:products!product_id(unit_price)").execute()
         total_value = sum(
-            Decimal(str(item.get("quantity", 0))) * Decimal(str(item.get("product", {}).get("unit_price", 0)))
+            Decimal(str(item.get("quantity", 0))) * Decimal(str((item.get("product") or {}).get("unit_price", 0)))
             for item in (stock_result.data or [])
         )
 
         low_stock_result = (
             supabase.table("stock_levels")
-            .select("id, quantity, product:products(id, name, sku, min_stock_level)")
+            .select("id, quantity, product:products!product_id(id, name, sku, min_stock_level)")
             .lte("quantity", 10)
             .execute()
         )
@@ -70,9 +70,9 @@ class DashboardService:
         supabase = get_supabase_client()
         
         # Current Value
-        stock_result = supabase.table("stock_levels").select("quantity, product_id, product:products(unit_price)").execute()
+        stock_result = supabase.table("stock_levels").select("quantity, product_id, product:products!product_id(unit_price)").execute()
         current_value = sum(
-            (item.get("quantity", 0)) * float(item.get("product", {}).get("unit_price", 0))
+            (item.get("quantity", 0)) * float((item.get("product") or {}).get("unit_price", 0))
             for item in (stock_result.data or [])
         )
         
@@ -86,7 +86,7 @@ class DashboardService:
         
         # Combined query to get all needed info for analytics
         all_txns = supabase.table("stock_transactions").select(
-            "quantity_change, txn_type, created_at, stock_levels(product:products(unit_price, category:categories(name)))"
+            "quantity_change, txn_type, created_at, stock_levels!stock_level_id(product:products!product_id(unit_price, category:categories!category_id(name)))"
         ).gte("created_at", thirty_days_ago.isoformat()).execute()
 
         for txn in (all_txns.data or []):

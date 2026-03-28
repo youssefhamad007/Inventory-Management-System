@@ -2,8 +2,9 @@ import * as React from 'react';
 import { X, Loader2, ArrowRightLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { fetchBranches, fetchStockLevels, adjustStock } from '@/api/services';
 
 interface TransferStockModalProps {
     isOpen: boolean;
@@ -13,19 +14,43 @@ interface TransferStockModalProps {
 export function TransferStockModal({ isOpen, onClose }: TransferStockModalProps) {
     const queryClient = useQueryClient();
 
-    // Mock mutation for transferring stock
+    const { data: branches, isLoading: branchesLoading } = useQuery({
+        queryKey: ['branches'],
+        queryFn: fetchBranches,
+        enabled: isOpen,
+    });
+
+    const { data: stock, isLoading: stockLoading } = useQuery({
+        queryKey: ['stock-sku-lookup'],
+        queryFn: () => fetchStockLevels(),
+        enabled: isOpen,
+    });
+
     const transferMutation = useMutation({
-        mutationFn: async (data: { source: string, dest: string, product: string, quantity: number }) => {
-            await new Promise((resolve) => setTimeout(resolve, 1000));
-            return data;
+        mutationFn: async (data: { source: string, dest: string, product_id: string, quantity: number }) => {
+            // Inter-branch transfer: 1) Out from source, 2) In to destination
+            await adjustStock({
+                product_id: data.product_id,
+                branch_id: data.source,
+                quantity_change: -data.quantity,
+                txn_type: 'transfer_out',
+                notes: 'Transfer to ' + data.dest,
+            });
+            return adjustStock({
+                product_id: data.product_id,
+                branch_id: data.dest,
+                quantity_change: data.quantity,
+                txn_type: 'transfer_in',
+                notes: 'Transfer from ' + data.source,
+            });
         },
         onSuccess: () => {
             toast.success('Stock transferred successfully!');
             queryClient.invalidateQueries({ queryKey: ['stock'] });
             onClose();
         },
-        onError: () => {
-            toast.error('Failed to transfer stock.');
+        onError: (err: any) => {
+            toast.error(err.response?.data?.detail || 'Failed to transfer stock.');
         }
     });
 
@@ -35,7 +60,7 @@ export function TransferStockModal({ isOpen, onClose }: TransferStockModalProps)
         transferMutation.mutate({
             source: formData.get('sourceBranch') as string,
             dest: formData.get('destBranch') as string,
-            product: formData.get('product') as string,
+            product_id: formData.get('productId') as string,
             quantity: Number(formData.get('quantity')),
         });
     };
@@ -60,8 +85,21 @@ export function TransferStockModal({ isOpen, onClose }: TransferStockModalProps)
 
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div className="space-y-2">
-                        <label htmlFor="product" className="text-sm font-medium">Product SKU</label>
-                        <Input id="product" name="product" required placeholder="e.g. SKU-1001" />
+                        <label htmlFor="productId" className="text-sm font-medium">Product Name / SKU</label>
+                        <select
+                            id="productId"
+                            name="productId"
+                            required
+                            disabled={stockLoading}
+                            className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                            <option value="">{stockLoading ? 'Loading stock...' : 'Select product SKU...'}</option>
+                            {stock?.map((row: any) => (
+                                <option key={row.id} value={row.product_id}>
+                                    {row.product?.name || 'Unknown'} ({row.product?.sku || 'N/A'})
+                                </option>
+                            ))}
+                        </select>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
@@ -71,11 +109,13 @@ export function TransferStockModal({ isOpen, onClose }: TransferStockModalProps)
                                 id="sourceBranch"
                                 name="sourceBranch"
                                 required
+                                disabled={branchesLoading}
                                 className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                             >
-                                <option value="" disabled selected>Select...</option>
-                                <option value="branch-1">Main Warehouse</option>
-                                <option value="branch-2">Downtown Store</option>
+                                <option value="">{branchesLoading ? 'Loading...' : 'Select...'}</option>
+                                {branches?.map((b: any) => (
+                                    <option key={b.id} value={b.id}>{b.name}</option>
+                                ))}
                             </select>
                         </div>
                         <div className="space-y-2">
@@ -84,11 +124,13 @@ export function TransferStockModal({ isOpen, onClose }: TransferStockModalProps)
                                 id="destBranch"
                                 name="destBranch"
                                 required
+                                disabled={branchesLoading}
                                 className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                             >
-                                <option value="" disabled selected>Select...</option>
-                                <option value="branch-2">Downtown Store</option>
-                                <option value="branch-1">Main Warehouse</option>
+                                <option value="">{branchesLoading ? 'Loading...' : 'Select...'}</option>
+                                {branches?.map((b: any) => (
+                                    <option key={b.id} value={b.id}>{b.name}</option>
+                                ))}
                             </select>
                         </div>
                     </div>

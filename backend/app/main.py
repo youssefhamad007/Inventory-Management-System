@@ -26,6 +26,10 @@ async def root():
 async def health_check():
     return {"status": "healthy"}
 
+@app.get("/api/v1/debug/routes")
+async def list_routes():
+    return [{"path": route.path, "name": route.name} for route in app.routes]
+
 # Include routers
 app.include_router(dashboard.router, prefix="/api/v1/dashboard", tags=["Dashboard"])
 app.include_router(products.router, prefix="/api/v1/products", tags=["Products"])
