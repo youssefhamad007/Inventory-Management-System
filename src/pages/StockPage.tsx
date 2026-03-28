@@ -5,48 +5,15 @@ import type { ColumnDef } from '@tanstack/react-table';
 import { useAdjustStockMutation } from '@/api/mutations/useStockMutations';
 import type { StockLevel } from '@/types/schema';
 import { Button } from '@/components/ui/button';
-import { Box } from 'lucide-react';
+import { Box, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { TransferStockModal } from '@/components/TransferStockModal';
-<<<<<<< HEAD
 import { fetchStockLevels } from '@/api/services';
-=======
-
-// Mock Fetcher for demonstration
-const fetchStockLevels = async (): Promise<StockLevel[]> => {
-    await new Promise((res) => setTimeout(res, 500));
-    return [
-        {
-            id: 'uuid-1',
-            product_id: 'prod-1',
-            branch_id: 'branch-1',
-            quantity: 120,
-            updated_at: new Date().toISOString(),
-            product: {
-                id: 'prod-1',
-                sku: 'SKU-1001',
-                name: 'Ergonomic Office Chair',
-                unit_price: 199.99,
-                cost_price: 100,
-                min_stock_level: 50,
-                is_active: true,
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString(),
-                barcode: null,
-                description: null,
-                category_id: null,
-                supplier_id: null,
-                image_url: null,
-            },
-        }
-    ];
-};
->>>>>>> parent of 2fc8efe (feat: Initialize full-stack application with core pages, authentication, routing, and backend API setup.)
 
 export function StockPage() {
-    const { data, isLoading } = useQuery({
+    const { data, isLoading, isError, refetch } = useQuery({
         queryKey: ['stock'],
-        queryFn: fetchStockLevels,
+        queryFn: () => fetchStockLevels(),
     });
 
     const [isTransferModalOpen, setIsTransferModalOpen] = React.useState(false);
@@ -150,6 +117,17 @@ export function StockPage() {
             },
         },
     ];
+
+    if (isError) {
+        return (
+            <div className="flex flex-col items-center justify-center p-12 text-center rounded-xl border border-destructive/20 bg-destructive/10">
+                <AlertCircle className="h-8 w-8 text-destructive mb-4" />
+                <h2 className="text-xl font-semibold mb-2">Failed to load stock data</h2>
+                <p className="text-muted-foreground mb-6">There was an issue connecting to the inventory service.</p>
+                <Button variant="outline" onClick={() => refetch()}>Try Again</Button>
+            </div>
+        );
+    }
 
     return (
         <div className="flex flex-col h-full space-y-6">

@@ -4,11 +4,13 @@ import { Header } from './Header';
 import { CommandPalette } from '@/components/CommandPalette';
 import { Toaster } from 'sonner';
 
+import { useRealtimeNotifications } from '@/hooks/useRealtimeNotifications';
+
 export function Layout() {
+    useRealtimeNotifications();
+
     return (
         <div className="flex h-screen w-full bg-background overflow-hidden">
-            {/* Notifications Hook */}
-            {/* <useRealtimeNotifications /> - will be instantiated where auth is present */}
 
             <Sidebar />
             <div className="flex flex-1 flex-col overflow-hidden">
