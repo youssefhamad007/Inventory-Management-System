@@ -1,204 +1,168 @@
-import * as React from 'react';
+import {
+    AlertTriangle,
+    ArrowUpRight,
+    ArrowDownRight,
+    Activity,
+    Clock,
+    CheckCircle2,
+    DollarSign
+} from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
-import { Package, TrendingUp, AlertCircle, RefreshCw } from 'lucide-react';
+import { apiClient } from '@/api/client';
 import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import { DataTable } from '@/components/DataTable';
-import { CommandPalette } from '@/components/CommandPalette';
-import type { ColumnDef } from '@tanstack/react-table';
 
-// Mock API call to simulate data fetching for dashboard statistics
-const fetchDashboardStats = async () => {
-    // Simulate network delay
-    await new Promise((resolve) => setTimeout(resolve, 800));
-    return {
-        totalProducts: 1240,
-        activeOrders: 48,
-        lowStockAlerts: 12,
-        inventoryValue: 1450000.5,
+interface DashboardStats {
+    total_inventory_value: number;
+    low_stock_alerts: any[];
+    order_summary: {
+        pending: number;
+        delivered: number;
     };
-};
-
-type MockProduct = {
-    id: string;
-    sku: string;
-    name: string;
-    category: string;
-    stockLevel: number;
-    status: string;
-};
-
-// Generates an array of at least 1,000 objects for testing virtualization
-const generateMockProducts = (count: number): MockProduct[] => {
-    const categories = ['Electronics', 'Furniture', 'Office Supplies', 'Apparel', 'Accessories'];
-    const statuses = ['Active', 'Active', 'Active', 'Low Stock', 'Discontinued'];
-    return Array.from({ length: count }, (_, i) => ({
-        id: `prod-${i}`,
-        sku: `SKU-${10000 + i}`,
-        name: `Virtual Test Product ${i + 1}`,
-        category: categories[Math.floor(Math.random() * categories.length)],
-        stockLevel: Math.floor(Math.random() * 1000),
-        status: statuses[Math.floor(Math.random() * statuses.length)],
-    }));
-};
-
-const columns: ColumnDef<MockProduct>[] = [
-    { accessorKey: 'sku', header: 'SKU' },
-    { accessorKey: 'name', header: 'Product Name' },
-    { accessorKey: 'category', header: 'Category' },
-    { accessorKey: 'stockLevel', header: 'Stock Level' },
-    { accessorKey: 'status', header: 'Status' },
-];
+    recent_transactions: any[];
+}
 
 export function DashboardPage() {
-    const { data: statsData, isLoading: statsLoading, isError, refetch, isFetching } = useQuery({
+    const { data: stats, isLoading } = useQuery<DashboardStats>({
         queryKey: ['dashboard-stats'],
-        queryFn: fetchDashboardStats,
+        queryFn: async () => {
+            const res = await apiClient.get('/dashboard/summary');
+            return res.data;
+        },
+        refetchInterval: 30000, // Refresh every 30s
     });
 
-    // Generate 1000 mock rows, memoized so it only happens once
-    const mockData = React.useMemo(() => generateMockProducts(1000), []);
-
-    const formattedValue = !statsData?.inventoryValue
-        ? '$0.00'
-        : new Intl.NumberFormat('en-US', {
-            style: 'currency',
-            currency: 'USD',
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 0,
-        }).format(statsData.inventoryValue);
-
-    if (isError) {
+    if (isLoading) {
         return (
-            <div className="flex flex-col items-center justify-center p-12 text-center rounded-xl border border-destructive/20 bg-destructive/10">
-                <AlertCircle className="h-8 w-8 text-destructive mb-4" />
-                <h2 className="text-xl font-semibold mb-2">Failed to load dashboard data</h2>
-                <Button variant="outline" onClick={() => refetch()}>Try Again</Button>
+            <div className="flex items-center justify-center h-full">
+                <Activity className="h-8 w-8 animate-spin text-primary" />
             </div>
         );
     }
 
-    return (
-        <div className="flex flex-col h-full space-y-6">
-            <CommandPalette />
+    const cards = [
+        {
+            title: 'Inventory Value',
+            value: `$${stats?.total_inventory_value.toLocaleString()}`,
+            icon: DollarSign,
+            color: 'text-blue-500',
+            bg: 'bg-blue-500/10',
+            trend: '+12.5%',
+            isPositive: true
+        },
+        {
+            title: 'Low Stock Alerts',
+            value: stats?.low_stock_alerts?.length || 0,
+            icon: AlertTriangle,
+            color: 'text-amber-500',
+            bg: 'bg-amber-500/10',
+            trend: stats?.low_stock_alerts?.length === 0 ? 'Optimal' : `Attention Required`,
+            isPositive: stats?.low_stock_alerts?.length === 0
+        },
+        {
+            title: 'Pending Orders',
+            value: stats?.order_summary.pending || 0,
+            icon: Clock,
+            color: 'text-purple-500',
+            bg: 'bg-purple-500/10',
+            trend: 'Next 24h',
+            isPositive: true
+        },
+        {
+            title: 'Delivered (MTD)',
+            value: stats?.order_summary.delivered || 0,
+            icon: CheckCircle2,
+            color: 'text-emerald-500',
+            bg: 'bg-emerald-500/10',
+            trend: '+5 from last week',
+            isPositive: true
+        }
+    ];
 
-            <div className="shrink-0 flex items-center justify-between">
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight text-primary drop-shadow-[0_0_8px_rgba(0,184,217,0.5)]">Dashboard Overview</h1>
-                    <p className="text-muted-foreground mt-1">
-                        Real-time insights across all inventory branches. (Press <kbd className="px-1 py-0.5 rounded-md bg-muted border text-xs">Cmd+K</kbd> to test palette)
+    return (
+        <div className="space-y-8 animate-in fade-in duration-700">
+            <div>
+                <h1 className="text-4xl font-bold tracking-tight text-white drop-shadow-[0_0_15px_rgba(0,184,217,0.3)]">
+                    System Overview
+                </h1>
+                <p className="text-muted-foreground mt-2 text-lg">
+                    Real-time telemetry and inventory performance metrics.
+                </p>
+            </div>
+
+            {/* KPI Grid */}
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+                {cards.map((card, idx) => (
+                    <div
+                        key={idx}
+                        className="group relative overflow-hidden rounded-2xl border border-white/5 bg-black/40 p-6 shadow-2xl transition-all hover:border-primary/50 hover:bg-black/60"
+                    >
+                        <div className="flex items-center justify-between">
+                            <div className={cn("rounded-xl p-3 transition-transform group-hover:scale-110", card.bg)}>
+                                <card.icon className={cn("h-6 w-6", card.color)} />
+                            </div>
+                            <div className={cn(
+                                "flex items-center gap-1 text-sm font-medium",
+                                card.isPositive ? "text-emerald-500" : "text-amber-500"
+                            )}>
+                                {card.isPositive ? <ArrowUpRight className="h-4 w-4" /> : <ArrowDownRight className="h-4 w-4" />}
+                                {card.trend}
+                            </div>
+                        </div>
+                        <div className="mt-4">
+                            <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">{card.title}</p>
+                            <h3 className="text-3xl font-bold mt-1 text-white tabular-nums">{card.value}</h3>
+                        </div>
+                        {/* Glow effect */}
+                        <div className="absolute -right-4 -bottom-4 h-24 w-24 bg-primary/5 blur-3xl rounded-full transition-opacity group-hover:opacity-100 opacity-0" />
+                    </div>
+                ))}
+            </div>
+
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7">
+                {/* Main Content Area placeholder */}
+                <div className="lg:col-span-4 rounded-2xl border border-white/5 bg-black/40 backdrop-blur-sm p-8 flex flex-col items-center justify-center min-h-[400px]">
+                    <Activity className="h-12 w-12 text-primary/20 mb-4" />
+                    <p className="text-muted-foreground text-center max-w-xs">
+                        Valuation trends and category analysis charts are available in the <span className="text-primary font-semibold">Reports</span> section.
                     </p>
                 </div>
-                <Button
-                    variant="outline"
-                    size="sm"
-                    className="border-primary/20 hover:border-primary/50 hover:bg-primary/10 text-primary transition-all duration-300 backdrop-blur-md"
-                    onClick={() => refetch()}
-                    disabled={isFetching}
-                >
-                    <RefreshCw className={cn('mr-2 h-4 w-4', isFetching && 'animate-spin')} />
-                    Refresh
-                </Button>
-            </div>
 
-            <div className="shrink-0 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <StatCard
-                    title="Total Products"
-                    value={statsLoading ? null : statsData?.totalProducts}
-                    icon={Package}
-                    trend="+4.2% from last month"
-                    iconClassName="text-blue-500"
-                />
-                <StatCard
-                    title="Active Orders"
-                    value={statsLoading ? null : statsData?.activeOrders}
-                    icon={TrendingUp}
-                    trend="+12 this week"
-                    iconClassName="text-emerald-500"
-                />
-                <StatCard
-                    title="Low Stock Alerts"
-                    value={statsLoading ? null : statsData?.lowStockAlerts}
-                    icon={AlertCircle}
-                    trend="Requires action"
-                    iconClassName="text-amber-500 drop-shadow-[0_0_5px_rgba(245,158,11,0.5)]"
-                    isAlert
-                />
-                <StatCard
-                    title="Total Value"
-                    value={statsLoading ? null : formattedValue}
-                    icon={Package} // Can use currency icon
-                    trend="Across 3 branches"
-                    iconClassName="text-indigo-500"
-                />
-            </div>
+                {/* Recent Activity */}
+                <div className="lg:col-span-3 rounded-2xl border border-white/5 bg-black/40 backdrop-blur-sm p-6 overflow-hidden flex flex-col">
+                    <div className="flex items-center justify-between mb-6">
+                        <h3 className="text-xl font-bold flex items-center gap-2">
+                            <Activity className="h-5 w-5 text-primary" />
+                            Live Activity
+                        </h3>
+                        <span className="text-xs font-medium px-2 py-1 rounded bg-primary/10 text-primary animate-pulse">LIVE</span>
+                    </div>
 
-            <div className="flex-1 min-h-0 flex flex-col bg-muted/20 backdrop-blur-md border border-white/5 rounded-xl text-card-foreground shadow-lg p-6 relative group">
-                <div className="absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
-                <h3 className="shrink-0 font-semibold text-lg mb-4 text-primary/90 flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-                    Product Inventory (Virtualization Test - 1000 rows)
-                </h3>
-                <div className="flex-1 min-h-0 relative z-10">
-                    <DataTable
-                        columns={columns}
-                        data={mockData}
-                        pageCount={1}
-                        pagination={{ pageIndex: 0, pageSize: 50 }}
-                        onPaginationChange={() => { }}
-                        sorting={[]}
-                        onSortingChange={() => { }}
-                    />
+                    <div className="space-y-4 flex-1 overflow-y-auto pr-2 custom-scrollbar">
+                        {stats?.recent_transactions.map((tx: any, idx: number) => (
+                            <div
+                                key={idx}
+                                className="flex items-start gap-4 p-3 rounded-xl hover:bg-white/5 transition-colors border border-transparent hover:border-white/5"
+                            >
+                                <div className={cn(
+                                    "mt-1 h-2 w-2 rounded-full shrink-0",
+                                    tx.txn_type.includes('in') ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" : "bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]"
+                                )} />
+                                <div className="space-y-1 min-w-0">
+                                    <p className="text-sm font-medium text-white truncate">
+                                        {tx.txn_type.replace('_', ' ').toUpperCase()}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground truncate">
+                                        {tx.quantity_change > 0 ? '+' : ''}{tx.quantity_change} units
+                                    </p>
+                                    <p className="text-[10px] text-muted-foreground/50">
+                                        {new Date(tx.created_at).toLocaleTimeString()}
+                                    </p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
                 </div>
             </div>
-        </div>
-    );
-}
-
-interface StatCardProps {
-    title: string;
-    value: string | number | null | undefined;
-    icon: React.ElementType;
-    trend: string;
-    iconClassName?: string;
-    isAlert?: boolean;
-}
-
-// Sub-component for Dashboard Widgets
-function StatCard({ title, value, icon: Icon, trend, iconClassName, isAlert }: StatCardProps) {
-    return (
-        <div className={cn(
-            "relative overflow-hidden rounded-xl border border-white/5 bg-muted/20 backdrop-blur-md p-6 transition-all duration-300",
-            "hover:border-primary/30 hover:bg-muted/30 hover:shadow-[0_0_15px_rgba(0,184,217,0.15)] group",
-            isAlert && "border-amber-500/30 bg-amber-500/10 hover:border-amber-500/50 hover:shadow-[0_0_15px_rgba(245,158,11,0.2)]"
-        )}>
-            {/* Subtle top-edge highlight on hover */}
-            <div className={cn(
-                "absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-primary/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300",
-                isAlert && "via-amber-500/50"
-            )} />
-
-            <div className="flex flex-row items-center justify-between pb-2 space-y-0 relative z-10">
-                <h3 className="tracking-tight text-sm font-medium text-muted-foreground group-hover:text-foreground transition-colors">{title}</h3>
-                <Icon className={cn("h-4 w-4 text-muted-foreground transition-transform group-hover:scale-110 duration-300", iconClassName)} />
-            </div>
-            <div className="mt-2 relative z-10">
-                {value === null ? (
-                    <div className="h-8 w-24 animate-pulse rounded-md bg-muted/50" />
-                ) : (
-                    <div className={cn(
-                        "text-2xl font-bold tracking-tight",
-                        isAlert ? "text-amber-500 drop-shadow-[0_0_8px_rgba(245,158,11,0.3)]" : "text-foreground drop-shadow-sm"
-                    )}>{value}</div>
-                )}
-                <p className="text-xs text-muted-foreground mt-1">{trend}</p>
-            </div>
-
-            {/* Decorative background glow blob */}
-            <div className={cn(
-                "absolute -bottom-4 -right-4 w-24 h-24 rounded-full blur-2xl opacity-0 group-hover:opacity-20 transition-opacity duration-500 pointer-events-none",
-                isAlert ? "bg-amber-500" : "bg-primary"
-            )} />
         </div>
     );
 }

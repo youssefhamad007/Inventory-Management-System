@@ -11,7 +11,7 @@ from app.models.order import (
     OrderType,
     OrderStatus,
 )
-from app.auth.permissions import require_manager
+from app.auth.permissions import require_role, require_staff, require_manager
 from app.auth.schemas import UserContext
 
 router = APIRouter()
@@ -20,26 +20,17 @@ router = APIRouter()
 @router.get(
     "/",
     response_model=List[OrderResponse],
-    summary="List orders",
+    summary="List all orders",
     description=(
-        "List purchase and sales orders with optional filters for status, type, and branch.\n\n"
-        "- **Roles**: Manager and Admin"
+        "Retrieve a list of orders. Managers and admins see all orders by default, "
+        "while staff members may be restricted by branch assignment in the service layer.\n\n"
+        "- **Roles**: Admin, Manager, and Staff"
     ),
 )
 async def list_orders(
-    order_type: Optional[OrderType] = Query(
-        None, description="Filter by order type (purchase or sale)"
-    ),
-    status: Optional[OrderStatus] = Query(
-        None, description="Filter by order status (draft, confirmed, shipped, delivered, cancelled)"
-    ),
-    branch_id: Optional[UUID] = Query(
-        None, description="Filter by branch ID (UUID)"
-    ),
-    user: UserContext = Depends(require_manager()),
+    user: UserContext = Depends(require_staff()),
 ) -> List[OrderResponse]:
-    # Managers (and admins) can see all orders; branch-level scoping is handled via filters/RLS.
-    return OrderService.list_orders(order_type, status, branch_id)
+    return OrderService.list_orders()
 
 
 @router.get(
@@ -65,12 +56,12 @@ async def get_order(
     summary="Create a new order",
     description=(
         "Create a new purchase or sales order with one or more line items.\n\n"
-        "- **Roles**: Manager and Admin"
+        "- **Roles**: Admin, Manager, and Staff"
     ),
 )
 async def create_order(
     order: OrderCreate,
-    user: UserContext = Depends(require_manager()),
+    user: UserContext = Depends(require_staff()),
 ) -> OrderResponse:
     return OrderService.create_order(order, user.id)
 
@@ -85,13 +76,13 @@ async def create_order(
         "for each line item using the StockService:\n"
         "- Purchase orders increase stock (inbound)\n"
         "- Sales orders decrease stock (outbound)\n\n"
-        "- **Roles**: Manager and Admin"
+        "- **Roles**: Admin, Manager, and Staff"
     ),
 )
 async def update_order_status(
     id: UUID,
     status_update: OrderUpdate,
-    user: UserContext = Depends(require_manager()),
+    user: UserContext = Depends(require_staff()),
 ) -> OrderResponse:
     if not status_update.status:
         raise HTTPException(status_code=400, detail="Status is required")

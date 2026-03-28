@@ -1,18 +1,25 @@
 import { NavLink } from 'react-router-dom';
 import { Home, Package, Box, ShoppingCart, MapPin, Users, FileBarChart } from 'lucide-react';
 import { cn } from '@/lib/utils';
-
-const navItems = [
-    { name: 'Dashboard', href: '/', icon: Home },
-    { name: 'Products', href: '/products', icon: Package },
-    { name: 'Stock', href: '/stock', icon: Box },
-    { name: 'Orders', href: '/orders', icon: ShoppingCart },
-    { name: 'Branches', href: '/branches', icon: MapPin },
-    { name: 'Users', href: '/users', icon: Users },
-    { name: 'Reports', href: '/reports', icon: FileBarChart },
-];
+import { useProfile } from '@/hooks/useProfile';
 
 export function Sidebar() {
+    const { data: profile } = useProfile();
+
+    const navItems = [
+        { name: 'Dashboard', href: '/', icon: Home, roles: ['admin', 'manager', 'staff'] },
+        { name: 'Products', href: '/products', icon: Package, roles: ['admin', 'manager', 'staff'] },
+        { name: 'Stock', href: '/stock', icon: Box, roles: ['admin', 'manager', 'staff'] },
+        { name: 'Orders', href: '/orders', icon: ShoppingCart, roles: ['admin', 'manager', 'staff'] },
+        { name: 'Branches', href: '/branches', icon: MapPin, roles: ['admin', 'manager'] },
+        { name: 'Users', href: '/users', icon: Users, roles: ['admin'] },
+        { name: 'Reports', href: '/reports', icon: FileBarChart, roles: ['admin', 'manager', 'staff'] },
+    ];
+
+    const filteredItems = navItems.filter(item =>
+        !profile || item.roles.includes(profile.role)
+    );
+
     return (
         <div className="flex h-full w-64 flex-col border-r border-white/5 bg-black/40 backdrop-blur-xl px-4 py-8 shadow-[10px_0_30px_rgba(0,0,0,0.5)] z-20 relative">
             <div className="flex items-center mb-8 px-2 space-x-3">
@@ -25,7 +32,7 @@ export function Sidebar() {
             </div>
 
             <nav className="flex-1 space-y-2 mt-4 relative z-10">
-                {navItems.map((item) => (
+                {filteredItems.map((item) => (
                     <NavLink
                         key={item.name}
                         to={item.href}
@@ -57,8 +64,8 @@ export function Sidebar() {
 
             <div className="mt-8 px-2">
                 <div className="rounded-lg bg-accent/50 p-4 border flex flex-col items-center text-center">
-                    <span className="text-sm font-semibold mb-1">Press <kbd className="font-mono text-xs bg-muted px-1 rounded shadow-sm border">⌘K</kbd> or <kbd className="font-mono text-xs bg-muted px-1 rounded shadow-sm border">Ctrl+K</kbd></span>
-                    <span className="text-xs text-muted-foreground">to open command menu</span>
+                    <span className="text-sm font-semibold mb-1">Nexus Core v1.0</span>
+                    <span className="text-xs text-muted-foreground capitalize">{profile?.role || 'Identifying...'} Access</span>
                 </div>
             </div>
         </div>

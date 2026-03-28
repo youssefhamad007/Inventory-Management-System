@@ -24,15 +24,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const fetchProfile = useCallback(async (userId: string, jwt: string) => {
     try {
       const res = await fetch(
-        `${import.meta.env.VITE_API_BASE_URL}/v1/users`,
+        `${import.meta.env.VITE_API_BASE_URL}/v1/users/me`,
         { headers: { Authorization: `Bearer ${jwt}` } }
       );
       if (res.ok) {
-        const users = await res.json();
-        const me = Array.isArray(users)
-          ? users.find((u: Profile) => u.id === userId)
-          : null;
-        setProfile(me ?? null);
+        const data = await res.json();
+        setProfile(data ?? null);
       }
     } catch {
       // If backend is unreachable, fall back to supabase profile query

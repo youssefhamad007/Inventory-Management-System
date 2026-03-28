@@ -5,7 +5,7 @@ from app.auth.permissions import require_admin, require_manager
 router = APIRouter()
 
 @router.get("/")
-async def list_branches(user=Depends(require_manager())):
+async def list_branches(user=Depends(require_staff())):
     supabase = get_supabase_client()
     result = supabase.table("branches").select("*").execute()
     return result.data
