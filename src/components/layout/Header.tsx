@@ -26,7 +26,7 @@ export function Header() {
     const { data: notifications } = useQuery({
         queryKey: ['notifications'],
         queryFn: async () => {
-            const res = await apiClient.get('/notifications/');
+            const res = await apiClient.get('notifications/');
             return res.data;
         },
         refetchInterval: 60000
