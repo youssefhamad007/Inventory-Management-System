@@ -9,10 +9,8 @@ import { Box } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { TransferStockModal } from '@/components/TransferStockModal';
 import { fetchStockLevels } from '@/api/services';
-import { useAuth } from '@/contexts/AuthContext';
 
 export function StockPage() {
-    const { user } = useAuth();
     const { data, isLoading } = useQuery({
         queryKey: ['stock'],
         queryFn: () => fetchStockLevels(),
