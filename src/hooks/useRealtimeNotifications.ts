@@ -18,7 +18,7 @@ export function useRealtimeNotifications() {
                     schema: 'public',
                     table: 'stock_levels',
                 },
-                (payload) => {
+                (payload: any) => {
                     console.log('Realtime stock change received:', payload);
                     queryClient.invalidateQueries({ queryKey: ['stock'] });
                     queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
@@ -31,12 +31,12 @@ export function useRealtimeNotifications() {
                     schema: 'public',
                     table: 'notifications',
                 },
-                (payload) => {
+                (payload: any) => {
                     console.log('Realtime notification received:', payload);
                     queryClient.invalidateQueries({ queryKey: ['notifications'] });
                 }
             )
-            .subscribe((status) => {
+            .subscribe((status: string) => {
                 if (status === 'SUBSCRIBED') {
                     console.log('Successfully subscribed to realtime updates.');
                 } else if (status === 'CHANNEL_ERROR') {

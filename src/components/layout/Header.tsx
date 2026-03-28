@@ -1,4 +1,4 @@
-import { Bell, User, Settings, Building, LogOut, Package } from 'lucide-react';
+import { Bell, User, Settings, Building, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
