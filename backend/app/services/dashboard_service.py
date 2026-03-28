@@ -67,7 +67,7 @@ class DashboardService:
         Generate a 30-day daily valuation trend by taking the current total value
         and walking backwards through stock transactions.
         """
-        supabase = get_supabase_client()
+        supabase = get_admin_client()
         
         # Current Value
         stock_result = supabase.table("stock_levels").select("quantity, product_id, product:products!product_id(unit_price)").execute()

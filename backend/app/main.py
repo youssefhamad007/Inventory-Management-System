@@ -22,19 +22,19 @@ app.add_middleware(
 async def root():
     return {"message": "IMS API is live!"}
 
-@app.get("/api/v1/health")
+@app.get("/v1/health")
 async def health_check():
     return {"status": "healthy"}
 
-@app.get("/api/v1/debug/routes")
+@app.get("/v1/debug/routes")
 async def list_routes():
     return [{"path": route.path, "name": route.name} for route in app.routes]
 
 # Include routers
-app.include_router(dashboard.router, prefix="/api/v1/dashboard", tags=["Dashboard"])
-app.include_router(products.router, prefix="/api/v1/products", tags=["Products"])
-app.include_router(stock.router, prefix="/api/v1/stock", tags=["Stock"])
-app.include_router(orders.router, prefix="/api/v1/orders", tags=["Orders"])
-app.include_router(branches.router, prefix="/api/v1/branches", tags=["Branches"])
-app.include_router(users.router, prefix="/api/v1/users", tags=["Users"])
-app.include_router(notifications.router, prefix="/api/v1/notifications", tags=["Notifications"])
+app.include_router(dashboard.router, prefix="/v1/dashboard", tags=["Dashboard"])
+app.include_router(products.router, prefix="/v1/products", tags=["Products"])
+app.include_router(stock.router, prefix="/v1/stock", tags=["Stock"])
+app.include_router(orders.router, prefix="/v1/orders", tags=["Orders"])
+app.include_router(branches.router, prefix="/v1/branches", tags=["Branches"])
+app.include_router(users.router, prefix="/v1/users", tags=["Users"])
+app.include_router(notifications.router, prefix="/v1/notifications", tags=["Notifications"])
