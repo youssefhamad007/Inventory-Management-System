@@ -4,7 +4,7 @@ from typing import List, Dict, Any, Optional
 
 from fastapi import HTTPException, status
 
-from app.db.supabase import get_supabase_client
+from app.db.supabase import get_supabase_client, get_admin_client
 
 
 class DashboardService:

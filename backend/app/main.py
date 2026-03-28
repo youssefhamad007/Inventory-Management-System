@@ -31,17 +31,20 @@ async def health_check_v1():
 async def health_check_root():
     return {"status": "healthy", "layer": "root"}
 
-# Unified V1 Router
-v1_router = APIRouter()
+# Flat API Routing for Vercel Resilience
+app.include_router(dashboard.router, prefix="/api/v1/dashboard", tags=["Dashboard"], strict_slashes=False)
+app.include_router(products.router, prefix="/api/v1/products", tags=["Products"], strict_slashes=False)
+app.include_router(stock.router, prefix="/api/v1/stock", tags=["Stock"], strict_slashes=False)
+app.include_router(orders.router, prefix="/api/v1/orders", tags=["Orders"], strict_slashes=False)
+app.include_router(branches.router, prefix="/api/v1/branches", tags=["Branches"], strict_slashes=False)
+app.include_router(users.router, prefix="/api/v1/users", tags=["Users"], strict_slashes=False)
+app.include_router(notifications.router, prefix="/api/v1/notifications", tags=["Notifications"], strict_slashes=False)
 
-v1_router.include_router(dashboard.router, prefix="/dashboard", tags=["Dashboard"])
-v1_router.include_router(products.router, prefix="/products", tags=["Products"])
-v1_router.include_router(stock.router, prefix="/stock", tags=["Stock"])
-v1_router.include_router(orders.router, prefix="/orders", tags=["Orders"])
-v1_router.include_router(branches.router, prefix="/branches", tags=["Branches"])
-v1_router.include_router(users.router, prefix="/users", tags=["Users"])
-v1_router.include_router(notifications.router, prefix="/notifications", tags=["Notifications"])
-
-# Include under both potential prefixes to handle Vercel routing logic
-app.include_router(v1_router, prefix="/api/v1")
-app.include_router(v1_router, prefix="/v1")
+# Optional: Also support without /api prefix for local testing and resilience
+app.include_router(dashboard.router, prefix="/v1/dashboard", tags=["Dashboard"], strict_slashes=False)
+app.include_router(products.router, prefix="/v1/products", tags=["Products"], strict_slashes=False)
+app.include_router(stock.router, prefix="/v1/stock", tags=["Stock"], strict_slashes=False)
+app.include_router(orders.router, prefix="/v1/orders", tags=["Orders"], strict_slashes=False)
+app.include_router(branches.router, prefix="/v1/branches", tags=["Branches"], strict_slashes=False)
+app.include_router(users.router, prefix="/v1/users", tags=["Users"], strict_slashes=False)
+app.include_router(notifications.router, prefix="/v1/notifications", tags=["Notifications"], strict_slashes=False)
