@@ -25,8 +25,6 @@ const queryClient = new QueryClient({
   },
 });
 
-import { AuthProvider } from '@/contexts/AuthContext';
-
 // React Router v6 Data BrowserRouter setup
 const router = createBrowserRouter([
   {
@@ -81,10 +79,8 @@ const router = createBrowserRouter([
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <RouterProvider router={router} />
-        <ReactQueryDevtools initialIsOpen={false} />
-      </AuthProvider>
+      <RouterProvider router={router} />
+      <ReactQueryDevtools initialIsOpen={false} />
     </QueryClientProvider>
   );
 }
