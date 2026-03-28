@@ -1,7 +1,7 @@
 import { apiClient } from './client';
 
 export async function fetchProducts(params?: { search?: string; category_id?: string; supplier_id?: string }) {
-    const { data } = await apiClient.get('/api/v1/products', { params });
+    const { data } = await apiClient.get('products', { params });
     return data;
 }
 
@@ -22,7 +22,7 @@ export async function createProduct(product: {
     barcode?: string;
     is_active?: boolean;
 }) {
-    const { data } = await apiClient.post('/api/v1/products', product);
+    const { data } = await apiClient.post('products', product);
     return data;
 }
 

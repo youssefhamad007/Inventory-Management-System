@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from 'react';
+import { apiClient } from '@/api/client';
 import { supabase } from '@/lib/supabase';
 import type { Session, User } from '@supabase/supabase-js';
 import type { Profile } from '@/types/schema';
@@ -23,13 +24,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Fetch profile from profiles table
   const fetchProfile = useCallback(async (userId: string, jwt: string) => {
     try {
-      const res = await fetch(
-        `${import.meta.env.VITE_API_BASE_URL}/v1/users/me`,
-        { headers: { Authorization: `Bearer ${jwt}` } }
-      );
-      if (res.ok) {
-        const data = await res.json();
-        setProfile(data ?? null);
+      const res = await apiClient.get('users/me', {
+        headers: { Authorization: `Bearer ${jwt}` }
+      });
+      if (res.status === 200) {
+        setProfile(res.data ?? null);
       }
     } catch {
       // If backend is unreachable, fall back to supabase profile query

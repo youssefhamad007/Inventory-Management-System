@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from app.db.supabase import get_supabase_client, get_admin_client
 from app.auth.permissions import require_admin
+from app.auth.middleware import get_current_user
 
 router = APIRouter()
 

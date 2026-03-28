@@ -25,7 +25,7 @@ export function DashboardPage() {
     const { data: stats, isLoading } = useQuery<DashboardStats>({
         queryKey: ['dashboard-stats'],
         queryFn: async () => {
-            const res = await apiClient.get('/dashboard/summary');
+            const res = await apiClient.get('dashboard/summary');
             return res.data;
         },
         refetchInterval: 30000, // Refresh every 30s
