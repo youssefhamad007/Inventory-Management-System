@@ -8,12 +8,15 @@ import { Button } from '@/components/ui/button';
 import { Box } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { TransferStockModal } from '@/components/TransferStockModal';
-import { fetchStockLevels } from '@/api/services';
 
-
-
+import { fetchStockLevels } from '@/api/stock';
+import { useProfile } from '@/hooks/useProfile';
 
 export function StockPage() {
+    const { data: profile, isLoading: isProfileLoading } = useProfile();
+    // Default to manager/admin view while loading to prevent flicker
+    const isManager = isProfileLoading || profile?.role === 'admin' || profile?.role === 'manager';
+
     const { data, isLoading } = useQuery<StockLevel[]>({
         queryKey: ['stock'],
         queryFn: () => fetchStockLevels(),
@@ -38,28 +41,23 @@ export function StockPage() {
         {
             accessorKey: 'product.sku',
             header: 'SKU',
-            cell: ({ row }) => {
-                const product = row.original.product || (row.original as any).products;
-                const sku = Array.isArray(product) ? product[0]?.sku : product?.sku;
-                return <span className="font-mono text-xs">{sku || 'N/A'}</span>
-            }
+            cell: ({ row }) => <span className="font-mono text-xs">{row.original.product?.sku}</span>
         },
         {
             accessorKey: 'product.name',
             header: 'Product Name',
-            cell: ({ row }) => {
-                const product = row.original.product || (row.original as any).products;
-                const name = Array.isArray(product) ? product[0]?.name : product?.name;
-                return <span className="font-medium">{name || 'Unknown Item'}</span>
-            }
+            cell: ({ row }) => <span className="font-medium">{row.original.product?.name}</span>
+        },
+        {
+            accessorKey: 'branch.name',
+            header: 'Location',
+            cell: ({ row }) => <span className="text-muted-foreground">{row.original.branch?.name}</span>
         },
         {
             accessorKey: 'quantity',
             header: 'Current Quantity',
             cell: ({ row }) => {
-                const product = row.original.product || (row.original as any).products;
-                const effectiveProduct = Array.isArray(product) ? product[0] : product;
-                const isLowStock = row.original.quantity <= (effectiveProduct?.min_stock_level || 0);
+                const isLowStock = row.original.quantity <= (row.original.product?.min_stock_level || 0);
                 return (
                     <span className={cn(
                         "font-bold text-lg px-2.5 py-1 rounded-md",
@@ -130,12 +128,14 @@ export function StockPage() {
                         Manage inventory counts and perform quick adjustments.
                     </p>
                 </div>
-                <Button
-                    className="shadow-[0_0_15px_rgba(0,184,217,0.3)] hover:shadow-[0_0_25px_rgba(0,184,217,0.5)] transition-shadow"
-                    onClick={() => setIsTransferModalOpen(true)}
-                >
-                    <Box className="mr-2 h-4 w-4" /> Transfer Stock
-                </Button>
+                {isManager && (
+                    <Button
+                        className="shadow-[0_0_15px_rgba(0,184,217,0.3)] hover:shadow-[0_0_25px_rgba(0,184,217,0.5)] transition-shadow"
+                        onClick={() => setIsTransferModalOpen(true)}
+                    >
+                        <Box className="mr-2 h-4 w-4" /> Transfer Stock
+                    </Button>
+                )}
             </div>
 
             <div className="flex-1 min-h-0 flex flex-col bg-muted/20 backdrop-blur-md border border-white/5 rounded-xl text-card-foreground shadow-lg p-6 relative group">
@@ -146,7 +146,7 @@ export function StockPage() {
                         data={data ?? []}
                         pageCount={1}
                         isLoading={isLoading}
-                        pagination={{ pageIndex: 0, pageSize: 10 }}
+                        pagination={{ pageIndex: 0, pageSize: 12 }}
                         onPaginationChange={() => { }}
                         sorting={[]}
                         onSortingChange={() => { }}

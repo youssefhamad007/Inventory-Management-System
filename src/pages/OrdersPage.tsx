@@ -1,10 +1,4 @@
 import * as React from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ShoppingCart, FileText, CheckCircle2, Clock, XCircle, GripVertical } from 'lucide-react';
-import type { Order, OrderStatus } from '@/types/schema';
-import { cn } from '@/lib/utils';
-import { toast } from 'sonner';
-
 import {
     DndContext,
     DragOverlay,
@@ -13,124 +7,54 @@ import {
     PointerSensor,
     useSensor,
     useSensors,
+    type DragStartEvent,
+    type DragEndEvent,
+    type DragOverEvent,
+    defaultDropAnimationSideEffects
 } from '@dnd-kit/core';
-import type { DragStartEvent, DragOverEvent, DragEndEvent } from '@dnd-kit/core';
 import {
     SortableContext,
-    arrayMove,
     sortableKeyboardCoordinates,
-    verticalListSortingStrategy,
-    useSortable,
+    verticalListSortingStrategy
 } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+    PackagePlus,
+    CheckCircle2,
+    Clock,
+    Truck,
+    FileText
+} from 'lucide-react';
+import { toast } from 'sonner';
 
-// --- MOCK API ---
-const mockOrders: Order[] = Array.from({ length: 45 }, (_, i) => {
-    const statuses: OrderStatus[] = ['draft', 'confirmed', 'shipped', 'delivered'];
-    return {
-        id: `ord-${i}`,
-        order_number: `ORD-2026-${1000 + i}`,
-        order_type: Math.random() > 0.5 ? 'purchase' : 'sale',
-        status: statuses[Math.floor(Math.random() * statuses.length)],
-        branch_id: `branch-1`,
-        supplier_id: null,
-        total_amount: Number((Math.random() * 5000 + 100).toFixed(2)),
-        notes: null,
-        created_by: 'user-1',
-        created_at: new Date(Date.now() - Math.random() * 10000000).toISOString(),
-        updated_at: new Date().toISOString(),
-    };
-});
+import { updateOrderStatus, fetchOrders } from '@/api/orders';
+import { KanbanColumn } from '@/components/orders/KanbanColumn';
+import { OrderCard } from '@/components/orders/OrderCard';
+import { CreateOrderModal } from '@/components/CreateOrderModal';
+import { Button } from '@/components/ui/button';
+import { useProfile } from '@/hooks/useProfile';
+import type { Order, OrderStatus } from '@/types/schema';
 
-const fetchOrders = async (): Promise<Order[]> => {
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    return mockOrders;
-};
-
-// ----------------
-
-const COLUMNS: { id: OrderStatus; title: string }[] = [
-    { id: 'draft', title: 'Awaiting Confirmation' },
-    { id: 'confirmed', title: 'Processing / Packing' },
-    { id: 'shipped', title: 'In Transit' },
-    { id: 'delivered', title: 'Completed' },
+const COLUMNS: { id: OrderStatus; label: string; icon: any; color: string }[] = [
+    { id: 'draft', label: 'Draft', icon: FileText, color: 'text-muted-foreground' },
+    { id: 'confirmed', label: 'Confirmed', icon: Clock, color: 'text-amber-500' },
+    { id: 'shipped', label: 'In Transit', icon: Truck, color: 'text-primary' },
+    { id: 'delivered', label: 'Delivered', icon: CheckCircle2, color: 'text-emerald-500' },
 ];
 
-const getStatusIcon = (status: OrderStatus) => {
-    switch (status) {
-        case 'delivered': return <CheckCircle2 className="h-4 w-4 text-emerald-500" />;
-        case 'shipped': return <ShoppingCart className="h-4 w-4 text-primary" />;
-        case 'cancelled': return <XCircle className="h-4 w-4 text-destructive" />;
-        case 'draft': return <FileText className="h-4 w-4 text-muted-foreground" />;
-        default: return <Clock className="h-4 w-4 text-amber-500" />;
-    }
-};
-
-// --- Sortable Item Component --- //
-interface SortableOrderCardProps {
-    order: Order;
-}
-
-function SortableOrderCard({ order }: SortableOrderCardProps) {
-    const {
-        attributes,
-        listeners,
-        setNodeRef,
-        transform,
-        transition,
-        isDragging,
-    } = useSortable({ id: order.id, data: { order } });
-
-    const style = {
-        transform: CSS.Transform.toString(transform),
-        transition,
-    };
-
-    return (
-        <div
-            ref={setNodeRef}
-            style={style}
-            {...attributes}
-            {...listeners}
-            className={cn(
-                "relative flex flex-col gap-2 p-3 bg-card border rounded-lg shadow-sm cursor-grab active:cursor-grabbing hover:border-primary/50 transition-colors group",
-                isDragging ? "opacity-50 border-primary" : "opacity-100"
-            )}
-        >
-            <div className="flex items-center justify-between">
-                <span className="text-xs font-mono text-muted-foreground">{order.order_number}</span>
-                {getStatusIcon(order.status)}
-            </div>
-
-            <div className="flex items-center justify-between mt-1">
-                <span className="font-semibold text-lg">${order.total_amount.toFixed(2)}</span>
-                <span className={cn(
-                    "text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full",
-                    order.order_type === 'purchase' ? "bg-amber-500/10 text-amber-500" : "bg-emerald-500/10 text-emerald-500"
-                )}>
-                    {order.order_type}
-                </span>
-            </div>
-
-            <div className="absolute top-1/2 -left-3 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
-                <GripVertical className="h-4 w-4 text-muted-foreground" />
-            </div>
-        </div>
-    );
-}
-
-
-// --- Main Page Component --- //
 export function OrdersPage() {
     const queryClient = useQueryClient();
+    const { data: profile, isLoading: isProfileLoading } = useProfile();
+    // Staff can also manage orders
+    const canManageOrders = !isProfileLoading && (profile?.role === 'admin' || profile?.role === 'manager' || profile?.role === 'staff');
 
-    // Internal state to manage optimistic sorting
+    const [isCreateOpen, setIsCreateOpen] = React.useState(false);
     const [activeId, setActiveId] = React.useState<string | null>(null);
     const [localOrders, setLocalOrders] = React.useState<Order[]>([]);
 
-    const { data: orders, isLoading } = useQuery({
+    const { data: orders } = useQuery<Order[]>({
         queryKey: ['orders'],
-        queryFn: fetchOrders,
+        queryFn: () => fetchOrders(),
     });
 
     React.useEffect(() => {
@@ -138,22 +62,22 @@ export function OrdersPage() {
     }, [orders]);
 
     const mutation = useMutation({
-        mutationFn: async ({ orderId, status }: { orderId: string, status: OrderStatus }) => {
-            // Mock successfully persisting to database
-            await new Promise((resolve) => setTimeout(resolve, 400));
-            return { orderId, status };
-        },
-        onSuccess: (data) => {
-            toast.success(`Order moved to ${data.status}`);
+        mutationFn: ({ id, status }: { id: string, status: OrderStatus }) => updateOrderStatus(id, status),
+        onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['orders'] });
+            queryClient.invalidateQueries({ queryKey: ['stock'] }); // Stock might change on delivery
+            toast.success('Order status updated');
+        },
+        onError: () => {
+            toast.error('Failed to update order status');
+            // Revert local state on error
+            if (orders) setLocalOrders(orders);
         }
     });
 
     const sensors = useSensors(
         useSensor(PointerSensor, {
-            activationConstraint: {
-                distance: 5, // 5px drag distance before firing to prevent accidental clicks
-            },
+            activationConstraint: { distance: 5 },
         }),
         useSensor(KeyboardSensor, {
             coordinateGetter: sortableKeyboardCoordinates,
@@ -168,129 +92,117 @@ export function OrdersPage() {
         const { active, over } = event;
         if (!over) return;
 
-        const activeId = String(active.id);
-        const overId = String(over.id);
+        const activeOrder = localOrders.find(o => o.id === active.id);
+        const overId = over.id as string;
 
-        if (activeId === overId) return;
+        // If dragging over a column or an item in a different column
+        let overColumnId: OrderStatus | undefined;
+        if (COLUMNS.find(c => c.id === overId)) {
+            overColumnId = overId as OrderStatus;
+        } else {
+            const overOrder = localOrders.find(o => o.id === overId);
+            if (overOrder) overColumnId = overOrder.status;
+        }
 
-        const isActiveAColumn = COLUMNS.some(col => col.id === activeId);
-        const isOverAColumn = COLUMNS.some(col => col.id === overId);
-
-        if (isActiveAColumn) return;
-
-        setLocalOrders((prev) => {
-            const activeIndex = prev.findIndex((t) => t.id === activeId);
-            const overIndex = prev.findIndex((t) => t.id === overId);
-
-            if (activeIndex === -1) return prev;
-
-            const newOrders = [...prev];
-            const activeOrder = { ...newOrders[activeIndex] };
-            newOrders[activeIndex] = activeOrder;
-
-            // Dropping over another item
-            if (overIndex >= 0 && !isOverAColumn) {
-                activeOrder.status = newOrders[overIndex].status;
-                return arrayMove(newOrders, activeIndex, overIndex);
-            }
-
-            // Dropping over an empty column
-            if (isOverAColumn) {
-                activeOrder.status = overId as OrderStatus;
-                return arrayMove(newOrders, activeIndex, newOrders.length - 1);
-            }
-
-            return prev;
-        });
+        if (activeOrder && overColumnId && activeOrder.status !== overColumnId) {
+            setLocalOrders(prev => prev.map(o =>
+                o.id === active.id ? { ...o, status: overColumnId! } : o
+            ));
+        }
     };
 
     const handleDragEnd = (event: DragEndEvent) => {
-        setActiveId(null);
         const { active, over } = event;
+        setActiveId(null);
+
         if (!over) return;
 
-        const activeId = String(active.id);
-        const overId = String(over.id);
+        const activeOrder = localOrders.find(o => o.id === active.id);
+        const overId = over.id as string;
 
-        const activeOrder = localOrders.find(o => o.id === activeId);
-        if (!activeOrder) return;
-
-        let newStatus = activeOrder.status;
-
-        const isOverAColumn = COLUMNS.some(col => col.id === overId);
-        if (isOverAColumn) {
-            newStatus = overId as OrderStatus;
+        let overColumnId: OrderStatus | undefined;
+        if (COLUMNS.find(c => c.id === overId)) {
+            overColumnId = overId as OrderStatus;
         } else {
             const overOrder = localOrders.find(o => o.id === overId);
-            if (overOrder) newStatus = overOrder.status;
+            if (overOrder) overColumnId = overOrder.status;
         }
 
-        // Fire mutation if status actually changed
-        const originalOrder = orders?.find(o => o.id === activeId);
-        if (originalOrder && originalOrder.status !== newStatus) {
-            mutation.mutate({ orderId: activeOrder.id, status: newStatus });
+        if (activeOrder && overColumnId) {
+            // Trigger actual API update
+            mutation.mutate({ id: activeOrder.id, status: overColumnId });
         }
     };
 
-    if (isLoading) return <div className="p-8 text-center animate-pulse">Loading tactical command stream...</div>;
-
-    const activeOrderData = activeId ? localOrders.find(o => o.id === activeId) : null;
+    const activeOrder = activeId ? localOrders.find(o => o.id === activeId) : null;
 
     return (
-        <div className="flex flex-col h-[calc(100vh-8rem)]">
-            <div className="mb-6 flex-shrink-0">
-                <h1 className="text-3xl font-bold tracking-tight text-primary drop-shadow-[0_0_8px_rgba(0,184,217,0.5)]">Mission Control: Orders</h1>
-                <p className="text-muted-foreground mt-1">
-                    Drag and drop shipments to update their fulfillment status in real-time.
-                </p>
+        <div className="flex flex-col h-full space-y-6">
+            <div className="shrink-0 flex items-center justify-between">
+                <div>
+                    <h1 className="text-3xl font-bold tracking-tight text-primary drop-shadow-[0_0_8px_rgba(0,184,217,0.5)]">
+                        Logistics & Orders
+                    </h1>
+                    <p className="text-muted-foreground mt-1">
+                        Drag and drop shipments to update their fulfillment status in real-time.
+                    </p>
+                </div>
+                {canManageOrders && (
+                    <Button
+                        onClick={() => setIsCreateOpen(true)}
+                        className="shadow-[0_0_15px_rgba(0,184,217,0.3)] hover:shadow-[0_0_25px_rgba(0,184,217,0.5)] transition-shadow"
+                    >
+                        <PackagePlus className="mr-2 h-4 w-4" /> New Order
+                    </Button>
+                )}
             </div>
 
-            <div className="flex-1 overflow-x-auto overflow-y-hidden pb-4">
-                <DndContext
-                    sensors={sensors}
-                    collisionDetection={closestCorners}
-                    onDragStart={handleDragStart}
-                    onDragOver={handleDragOver}
-                    onDragEnd={handleDragEnd}
-                >
-                    <div className="flex gap-6 h-full min-w-max">
-                        {COLUMNS.map((column) => {
-                            const columnOrders = localOrders.filter(order => order.status === column.id);
-
-                            return (
-                                <div key={column.id} className="w-[300px] flex flex-col bg-muted/20 backdrop-blur-md border rounded-xl overflow-hidden shrink-0">
-                                    <div className="p-4 border-b bg-card/50 flex items-center justify-between">
-                                        <h3 className="font-semibold text-sm tracking-wide uppercase">{column.title}</h3>
-                                        <span className="bg-primary/20 text-primary text-xs font-mono px-2 py-0.5 rounded-full">{columnOrders.length}</span>
-                                    </div>
-
-                                    <div className="flex-1 p-3 overflow-y-auto">
-                                        <SortableContext
-                                            id={column.id}
-                                            items={columnOrders.map(o => o.id)}
-                                            strategy={verticalListSortingStrategy}
-                                        >
-                                            <div className="flex flex-col gap-3 min-h-[100px]">
-                                                {columnOrders.map(order => (
-                                                    <SortableOrderCard key={order.id} order={order} />
-                                                ))}
-                                            </div>
-                                        </SortableContext>
-                                    </div>
+            <DndContext
+                sensors={sensors}
+                collisionDetection={closestCorners}
+                onDragStart={handleDragStart}
+                onDragOver={handleDragOver}
+                onDragEnd={handleDragEnd}
+            >
+                <div className="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    {COLUMNS.map((col) => (
+                        <KanbanColumn
+                            key={col.id}
+                            id={col.id}
+                            title={col.label}
+                            icon={col.icon}
+                            color={col.color}
+                            count={localOrders.filter(o => o.status === col.id).length}
+                        >
+                            <SortableContext
+                                items={localOrders.filter(o => o.status === col.id).map(o => o.id)}
+                                strategy={verticalListSortingStrategy}
+                            >
+                                <div className="space-y-4">
+                                    {localOrders
+                                        .filter(o => o.status === col.id)
+                                        .map((order) => (
+                                            <OrderCard key={order.id} order={order} disabled={!canManageOrders} />
+                                        ))}
                                 </div>
-                            );
-                        })}
-                    </div>
+                            </SortableContext>
+                        </KanbanColumn>
+                    ))}
+                </div>
 
-                    <DragOverlay>
-                        {activeOrderData ? (
-                            <div className="opacity-80 rotate-3 scale-105 transition-transform cursor-grabbing ring-2 ring-primary">
-                                <SortableOrderCard order={activeOrderData} />
-                            </div>
-                        ) : null}
-                    </DragOverlay>
-                </DndContext>
-            </div>
+                <DragOverlay dropAnimation={{
+                    sideEffects: defaultDropAnimationSideEffects({
+                        styles: { active: { opacity: '0.5' } },
+                    }),
+                }}>
+                    {activeOrder ? <OrderCard order={activeOrder} isDragging disabled={!canManageOrders} /> : null}
+                </DragOverlay>
+            </DndContext>
+
+            <CreateOrderModal
+                isOpen={isCreateOpen}
+                onClose={() => setIsCreateOpen(false)}
+            />
         </div>
     );
 }

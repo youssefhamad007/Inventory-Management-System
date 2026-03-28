@@ -14,7 +14,7 @@ export const apiClient = axios.create({
 apiClient.interceptors.request.use(
   (config) => {
     // Integrate with Supabase session or other auth mechanisms
-    const token = localStorage.getItem('supabase-auth-token'); 
+    const token = localStorage.getItem('supabase-auth-token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }

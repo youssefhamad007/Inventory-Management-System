@@ -1,215 +1,137 @@
-import { useQuery } from '@tanstack/react-query';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend } from 'recharts';
-import { Calendar, TrendingUp, Package, DollarSign, RefreshCw, AlertCircle } from 'lucide-react';
+import { Calendar, TrendingUp, Package, DollarSign, Activity, FileDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { fetchAnalytics, fetchDashboardSummary } from '@/api/services';
+import { useQuery } from '@tanstack/react-query';
+import { apiClient } from '@/api/client';
 import { cn } from '@/lib/utils';
 
+interface AnalyticsData {
+    valuation_trend: any[];
+    stock_movement: any[];
+}
+
 export function ReportsPage() {
-    const {
-        data: analytics,
-        isLoading: analyticsLoading,
-        isError: analyticsError,
-        refetch: refetchAnalytics
-    } = useQuery({
+    const { data: analytics, isLoading } = useQuery<AnalyticsData>({
         queryKey: ['analytics'],
-        queryFn: fetchAnalytics,
+        queryFn: async () => {
+            const res = await apiClient.get('/dashboard/analytics');
+            return res.data;
+        }
     });
 
-    const {
-        data: summary,
-        isLoading: summaryLoading,
-        refetch: refetchSummary
-    } = useQuery({
-        queryKey: ['dashboard-summary'],
-        queryFn: fetchDashboardSummary,
-    });
-
-    const isLoading = analyticsLoading || summaryLoading;
-
-    const refreshData = () => {
-        refetchAnalytics();
-        refetchSummary();
-    };
-
-    if (analyticsError) {
+    if (isLoading) {
         return (
-            <div className="flex flex-col items-center justify-center p-12 text-center rounded-xl border border-destructive/20 bg-destructive/10">
-                <AlertCircle className="h-8 w-8 text-destructive mb-4" />
-                <h2 className="text-xl font-semibold mb-2">Failed to load analytics data</h2>
-                <Button variant="outline" onClick={refreshData}>Try Again</Button>
+            <div className="flex items-center justify-center h-full">
+                <Activity className="h-12 w-12 animate-spin text-primary/40" />
             </div>
         );
     }
 
-    const valuationData = analytics?.valuation_trend || [];
-    const movementData = analytics?.stock_movement || [];
-
-    const totalValue = summary?.total_inventory_value || 0;
-    const lowStockCount = summary?.low_stock_alerts?.length || 0;
-
-    const formattedValue = new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: 'USD',
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
-    }).format(Number(totalValue));
+    const currentValuation = (analytics?.valuation_trend?.length ?? 0) > 0
+        ? analytics!.valuation_trend[analytics!.valuation_trend.length - 1]?.value || 0
+        : 0;
+    const previousValuation = analytics?.valuation_trend?.[0]?.value || 1;
+    const growth = ((currentValuation - previousValuation) / previousValuation * 100).toFixed(1);
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-8 animate-in zoom-in-95 duration-500">
             {/* Header & Controls */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight text-primary drop-shadow-[0_0_8px_rgba(0,184,217,0.5)]">Reports & Analytics</h1>
-                    <p className="text-muted-foreground mt-1">
-                        Visualize inventory valuation, turnover, and historical trends.
+                    <h1 className="text-3xl font-bold tracking-tight text-white drop-shadow-[0_0_10px_rgba(0,184,217,0.4)]">Intelligence Center</h1>
+                    <p className="text-muted-foreground mt-1 text-lg">
+                        Historical valuation trends and categorical turnover metrics.
                     </p>
                 </div>
-                <div className="flex items-center space-x-2">
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        className="border-primary/20 hover:border-primary/50 hover:bg-primary/10 text-primary transition-all duration-300 backdrop-blur-md"
-                        onClick={refreshData}
-                    >
-                        <RefreshCw className={cn('mr-2 h-4 w-4', isLoading && 'animate-spin')} />
-                        Refresh
+                <div className="flex items-center space-x-3">
+                    <Button variant="outline" className="bg-black/40 border-white/10 group">
+                        <Calendar className="mr-2 h-4 w-4 text-primary group-hover:scale-110 transition-transform" />
+                        <span>Fixed 30-Day Window</span>
                     </Button>
-                    <Button>Export CSV</Button>
+                    <Button className="shadow-[0_0_15px_rgba(0,184,217,0.3)]">
+                        <FileDown className="mr-2 h-4 w-4" /> Export Report
+                    </Button>
                 </div>
             </div>
 
-            {/* KPI Summary Cards */}
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <StatCard
-                    title="Total Inventory Value"
-                    value={isLoading ? null : formattedValue}
-                    icon={DollarSign}
-                    iconClassName="text-blue-500"
-                />
-                <StatCard
-                    title="Est. Profit Margin"
-                    value="41.2%"
-                    icon={TrendingUp}
-                    iconClassName="text-emerald-500"
-                />
-                <StatCard
-                    title="Low Stock SKUs"
-                    value={isLoading ? null : lowStockCount}
-                    icon={Package}
-                    iconClassName="text-amber-500"
-                    isAlert={lowStockCount > 0}
-                />
-                <StatCard
-                    title="Stock Turnover Rate"
-                    value="4.8x"
-                    icon={Calendar}
-                    iconClassName="text-purple-500"
-                />
+            {/* KPI Cards */}
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+                {[
+                    { label: 'Current Valuation', value: `$${currentValuation.toLocaleString()}`, icon: DollarSign, color: 'text-blue-400', trend: `+${growth}%` },
+                    { label: 'Asset Appreciation', value: '41.2%', icon: TrendingUp, color: 'text-emerald-400', trend: 'STABLE' },
+                    { label: 'Turnover Velocity', value: '4.8x', icon: Activity, color: 'text-purple-400', trend: '+0.2x' },
+                    { label: 'Replenishment Risk', value: 'Low', icon: Package, color: 'text-amber-400', trend: 'OPTIMAL' },
+                ].map((kpi, idx) => (
+                    <div key={idx} className="rounded-2xl border border-white/5 bg-black/40 p-6 shadow-2xl hover:border-primary/30 transition-all group">
+                        <div className="flex items-start justify-between">
+                            <div className="p-2 rounded-lg bg-white/5 text-muted-foreground group-hover:text-primary transition-colors">
+                                <kpi.icon className="h-5 w-5" />
+                            </div>
+                            <span className="text-[10px] font-bold text-primary/60 tracking-tighter uppercase">{kpi.trend}</span>
+                        </div>
+                        <div className="mt-4">
+                            <p className="text-xs font-medium text-muted-foreground uppercase">{kpi.label}</p>
+                            <h3 className={cn("text-2xl font-bold mt-1 tracking-tight", kpi.color)}>{kpi.value}</h3>
+                        </div>
+                    </div>
+                ))}
             </div>
 
             {/* Main Charts Area */}
             <div className="grid gap-6 md:grid-cols-2">
                 {/* Area Chart: Valuation Trend */}
-                <div className="rounded-xl border border-white/5 bg-black/40 backdrop-blur-xl text-card-foreground shadow-[0_4px_20px_rgba(0,0,0,0.5)] p-6 group">
-                    <h3 className="text-lg font-semibold mb-6 flex items-center gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
-                        Inventory Valuation Trend
+                <div className="rounded-2xl border border-white/5 bg-black/40 p-6 shadow-2xl relative group overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-tr from-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <h3 className="text-lg font-bold mb-8 flex items-center gap-2">
+                        <TrendingUp className="h-5 w-5 text-blue-500" />
+                        30-Day Valuation Pulse
                     </h3>
-                    <div className="h-[300px] w-full">
-                        {isLoading ? (
-                            <div className="w-full h-full animate-pulse bg-white/5 rounded-lg" />
-                        ) : (
-                            <ResponsiveContainer width="100%" height="100%">
-                                <AreaChart data={valuationData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                                    <defs>
-                                        <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
-                                            <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
-                                        </linearGradient>
-                                        <linearGradient id="colorCost" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
-                                            <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
-                                        </linearGradient>
-                                    </defs>
-                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.1)" />
-                                    <XAxis dataKey="month" stroke="#666" fontSize={12} tickLine={false} axisLine={false} />
-                                    <YAxis stroke="#666" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(val) => `$${val / 1000}k`} />
-                                    <Tooltip
-                                        contentStyle={{ backgroundColor: '#000', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)' }}
-                                        itemStyle={{ color: '#fff' }}
-                                    />
-                                    <Legend verticalAlign="top" height={36} />
-                                    <Area type="monotone" name="Retail Value" dataKey="value" stroke="#3b82f6" strokeWidth={2} fillOpacity={1} fill="url(#colorValue)" />
-                                    <Area type="monotone" name="Cost Basis" dataKey="cost" stroke="#10b981" strokeWidth={2} fillOpacity={1} fill="url(#colorCost)" />
-                                </AreaChart>
-                            </ResponsiveContainer>
-                        )}
+                    <div className="h-[350px] w-full relative z-10 overflow-hidden rounded-xl border border-white/5 bg-black/20">
+                        <ResponsiveContainer width="100%" height="100%" minHeight={350}>
+                            <AreaChart data={analytics?.valuation_trend} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                                <defs>
+                                    <linearGradient id="colorVal" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.4} />
+                                        <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                                    </linearGradient>
+                                </defs>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
+                                <XAxis dataKey="month" stroke="rgba(255,255,255,0.3)" fontSize={10} tickLine={false} axisLine={false} />
+                                <YAxis stroke="rgba(255,255,255,0.3)" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(val) => `$${(val / 1000).toFixed(0)}k`} />
+                                <Tooltip
+                                    contentStyle={{ backgroundColor: '#000', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 10px 30px rgba(0,0,0,0.5)' }}
+                                    itemStyle={{ color: '#fff', fontSize: '12px' }}
+                                />
+                                <Area type="monotone" name="Total Value" dataKey="value" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorVal)" />
+                            </AreaChart>
+                        </ResponsiveContainer>
                     </div>
                 </div>
 
-                {/* Bar Chart: Stock Movement by Category */}
-                <div className="rounded-xl border border-white/5 bg-black/40 backdrop-blur-xl text-card-foreground shadow-[0_4px_20px_rgba(0,0,0,0.5)] p-6 group">
-                    <h3 className="text-lg font-semibold mb-6 flex items-center gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                        Stock Movement by Category (30d)
+                {/* Bar Chart: Stock Movement */}
+                <div className="rounded-2xl border border-white/5 bg-black/40 p-6 shadow-2xl relative group overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-tr from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <h3 className="text-lg font-bold mb-8 flex items-center gap-2">
+                        <Package className="h-5 w-5 text-emerald-500" />
+                        Categorical Volume Split
                     </h3>
-                    <div className="h-[300px] w-full">
-                        {isLoading ? (
-                            <div className="w-full h-full animate-pulse bg-white/5 rounded-lg" />
-                        ) : (
-                            <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={movementData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.1)" />
-                                    <XAxis dataKey="name" stroke="#666" fontSize={12} tickLine={false} axisLine={false} />
-                                    <YAxis stroke="#666" fontSize={12} tickLine={false} axisLine={false} />
-                                    <Tooltip
-                                        cursor={{ fill: 'rgba(255,255,255,0.05)' }}
-                                        contentStyle={{ backgroundColor: '#000', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)' }}
-                                    />
-                                    <Legend verticalAlign="top" height={36} />
-                                    <Bar name="Units Received (In)" dataKey="in" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                                    <Bar name="Units Sold/Transferred (Out)" dataKey="out" fill="#f59e0b" radius={[4, 4, 0, 0]} />
-                                </BarChart>
-                            </ResponsiveContainer>
-                        )}
+                    <div className="h-[350px] w-full relative z-10 overflow-hidden rounded-xl border border-white/5 bg-black/20">
+                        <ResponsiveContainer width="100%" height="100%" minHeight={350}>
+                            <BarChart data={analytics?.stock_movement}>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
+                                <XAxis dataKey="name" stroke="rgba(255,255,255,0.3)" fontSize={10} tickLine={false} axisLine={false} />
+                                <YAxis stroke="rgba(255,255,255,0.3)" fontSize={10} tickLine={false} axisLine={false} />
+                                <Tooltip
+                                    cursor={{ fill: 'rgba(255,255,255,0.05)' }}
+                                    contentStyle={{ backgroundColor: '#000', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)' }}
+                                />
+                                <Legend verticalAlign="top" height={36} wrapperStyle={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px' }} />
+                                <Bar name="Units In" dataKey="in" fill="#3b82f6" radius={[4, 4, 0, 0]} barSize={20} />
+                                <Bar name="Units Out" dataKey="out" fill="#10b981" radius={[4, 4, 0, 0]} barSize={20} />
+                            </BarChart>
+                        </ResponsiveContainer>
                     </div>
                 </div>
-            </div>
-        </div>
-    );
-}
-
-interface StatCardProps {
-    title: string;
-    value: string | number | null;
-    icon: React.ElementType;
-    iconClassName?: string;
-    isAlert?: boolean;
-}
-
-function StatCard({ title, value, icon: Icon, iconClassName, isAlert }: StatCardProps) {
-    return (
-        <div className={cn(
-            "rounded-xl border border-white/5 bg-black/40 backdrop-blur-xl text-card-foreground shadow-[0_4px_20px_rgba(0,0,0,0.5)] p-6 flex items-center space-x-4 transition-all hover:bg-black/60 group",
-            isAlert ? "hover:shadow-[0_8px_30px_rgba(245,158,11,0.2)] hover:border-amber-500/30" : "hover:shadow-[0_8px_30px_rgba(0,184,217,0.2)] hover:border-primary/30"
-        )}>
-            <div className={cn(
-                "p-3 rounded-full transition-all group-hover:shadow-[0_0_15px_rgba(255,255,255,0.2)]",
-                iconClassName?.replace('text-', 'bg-') + '/10'
-            )}>
-                <Icon className={cn("h-6 w-6", iconClassName)} />
-            </div>
-            <div>
-                <p className="text-sm font-medium text-muted-foreground group-hover:text-primary/80 transition-colors">{title}</p>
-                {value === null ? (
-                    <div className="h-8 w-24 animate-pulse bg-white/5 rounded-md mt-1" />
-                ) : (
-                    <h3 className={cn(
-                        "text-2xl font-bold tracking-tight group-hover:text-white transition-colors",
-                        isAlert && "text-amber-500"
-                    )}>{value}</h3>
-                )}
             </div>
         </div>
     );

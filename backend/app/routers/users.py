@@ -11,6 +11,12 @@ async def list_users(user=Depends(require_admin())):
     result = supabase.table("profiles").select("*, branches(name)").execute()
     return result.data
 
+@router.get("/me")
+async def get_my_profile(user=Depends(get_current_user)):
+    supabase = get_admin_client()
+    result = supabase.table("profiles").select("*, branches(name)").eq("id", user["id"]).single().execute()
+    return result.data
+
 @router.put("/{id}/role")
 async def update_user_role(id: str, role_update: dict, user=Depends(require_admin())):
     if role_update.get("role") not in ["admin", "manager", "staff"]:
