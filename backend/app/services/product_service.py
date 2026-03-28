@@ -14,7 +14,7 @@ class ProductService:
         limit: int = 100
     ) -> List[dict]:
         supabase = get_supabase_client()
-        query = supabase.table("products").select("*, categories(name), suppliers(name)")
+        query = supabase.table("products").select("*, category:categories(name), supplier:suppliers(name)")
         
         if category_id:
             query = query.eq("category_id", str(category_id))
@@ -29,7 +29,7 @@ class ProductService:
     @staticmethod
     def get_product(product_id: UUID) -> dict:
         supabase = get_supabase_client()
-        result = supabase.table("products").select("*, categories(name), suppliers(name)").eq("id", str(product_id)).single().execute()
+        result = supabase.table("products").select("*, category:categories(name), supplier:suppliers(name)").eq("id", str(product_id)).single().execute()
         if not result.data:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
         return result.data

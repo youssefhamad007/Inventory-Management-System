@@ -6,6 +6,11 @@ export async function fetchDashboardSummary() {
   return data;
 }
 
+export async function fetchAnalytics() {
+  const { data } = await apiClient.get('/v1/dashboard/analytics');
+  return data;
+}
+
 // ─── Products ────────────────────────────────────
 export async function fetchProducts(params?: { search?: string; category_id?: string; supplier_id?: string }) {
   const { data } = await apiClient.get('/v1/products', { params });

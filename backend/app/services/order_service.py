@@ -37,7 +37,7 @@ class OrderService:
         branch_id: Optional[UUID] = None,
     ) -> List[OrderResponse]:
         supabase = get_supabase_client()
-        query = supabase.table("orders").select("*, order_items(*), branches(name), suppliers(name)")
+        query = supabase.table("orders").select("*, items:order_items(*, product:products(name, sku)), branch:branches(name), supplier:suppliers(name)")
 
         if order_type is not None:
             query = query.eq("order_type", order_type.value)
@@ -55,7 +55,7 @@ class OrderService:
         supabase = get_supabase_client()
         result = (
             supabase.table("orders")
-            .select("*, order_items(*, products(name, sku))")
+            .select("*, items:order_items(*, product:products(name, sku)), branch:branches(name), supplier:suppliers(name)")
             .eq("id", str(order_id))
             .single()
             .execute()

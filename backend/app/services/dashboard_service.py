@@ -13,15 +13,15 @@ class DashboardService:
         supabase = get_supabase_client()
 
         # Total inventory value: manual aggregation since RPC doesn't exist
-        stock_result = supabase.table("stock_levels").select("quantity, product_id, products(unit_price)").execute()
+        stock_result = supabase.table("stock_levels").select("quantity, product_id, product:products(unit_price)").execute()
         total_value = sum(
-            Decimal(str(item.get("quantity", 0))) * Decimal(str(item.get("products", {}).get("unit_price", 0)))
+            Decimal(str(item.get("quantity", 0))) * Decimal(str(item.get("product", {}).get("unit_price", 0)))
             for item in (stock_result.data or [])
         )
 
         low_stock_result = (
             supabase.table("stock_levels")
-            .select("id, quantity, products(id, name, sku, min_stock_level)")
+            .select("id, quantity, product:products(id, name, sku, min_stock_level)")
             .lte("quantity", 10)
             .execute()
         )
@@ -70,9 +70,9 @@ class DashboardService:
         supabase = get_supabase_client()
         
         # Current Value
-        stock_result = supabase.table("stock_levels").select("quantity, product_id, products(unit_price)").execute()
+        stock_result = supabase.table("stock_levels").select("quantity, product_id, product:products(unit_price)").execute()
         current_value = sum(
-            (item.get("quantity", 0)) * float(item.get("products", {}).get("unit_price", 0))
+            (item.get("quantity", 0)) * float(item.get("product", {}).get("unit_price", 0))
             for item in (stock_result.data or [])
         )
         
@@ -80,22 +80,37 @@ class DashboardService:
         today = date.today()
         thirty_days_ago = today - timedelta(days=30)
         
-        txns = supabase.table("stock_transactions").select(
-            "quantity_change, txn_type, created_at, stock_levels(product_id, products(unit_price))"
-        ).gte("created_at", thirty_days_ago.isoformat()).execute()
-        
-        # Group deltas by day
+        # Group deltas by day & Aggregate movement by category
         deltas_by_day = {}
-        for txn in (txns.data or []):
+        category_movement = {} # { "category_name": { "in": 0, "out": 0 } }
+        
+        # Combined query to get all needed info for analytics
+        all_txns = supabase.table("stock_transactions").select(
+            "quantity_change, txn_type, created_at, stock_levels(product:products(unit_price, category:categories(name)))"
+        ).gte("created_at", thirty_days_ago.isoformat()).execute()
+
+        for txn in (all_txns.data or []):
+            # Category movement for bar chart
+            stock_level = txn.get("stock_levels", {}) or {}
+            product = stock_level.get("product", {}) or {}
+            category = product.get("category", {}) or {}
+            cat_name = category.get("name") or "Uncategorized"
+            
+            if cat_name not in category_movement:
+                category_movement[cat_name] = {"in": 0, "out": 0}
+            
+            change = txn.get("quantity_change", 0)
+            if change > 0:
+                category_movement[cat_name]["in"] += change
+            else:
+                category_movement[cat_name]["out"] += abs(change)
+
+            # Daily valuation delta for area chart
             dt = datetime.fromisoformat(txn["created_at"].replace("Z", "+00:00")).date()
             day_str = dt.strftime("%Y-%m-%d")
-            qty = txn.get("quantity_change", 0)
-            price = float(txn.get("stock_levels", {}).get("products", {}).get("unit_price", 0))
-            val_change = qty * price
+            price = float(product.get("unit_price", 0))
+            val_change = change * price
             
-            # If it was an inbound transaction (increase), walking backwards means we subtract it.
-            # If outbound (decrease), walking backwards means we add it back.
-            # But the quantity_change itself is signed correctly (+ for in, - for out).
             deltas_by_day[day_str] = deltas_by_day.get(day_str, 0) + val_change
             
         valuation_data = []
@@ -120,10 +135,8 @@ class DashboardService:
         return {
             "valuation_trend": valuation_data,
             "stock_movement": [
-                {"name": "Electronics", "in": 400, "out": 240},
-                {"name": "Apparel", "in": 300, "out": 390},
-                {"name": "Home Goods", "in": 200, "out": 180},
-                {"name": "Office", "in": 278, "out": 190},
+                {"name": name, "in": data["in"], "out": data["out"]}
+                for name, data in category_movement.items()
             ]
         }
 

@@ -11,7 +11,7 @@ class StockService:
         product_id: Optional[UUID] = None
     ) -> List[dict]:
         supabase = get_supabase_client()
-        query = supabase.table("stock_levels").select("*, products(name, sku), branches(name)")
+        query = supabase.table("stock_levels").select("*, product:products(name, sku), branch:branches(name)")
         
         if branch_id:
             query = query.eq("branch_id", str(branch_id))
