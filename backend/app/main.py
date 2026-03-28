@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
-from app.routers import products, stock, orders, branches, users, dashboard
+from app.routers import products, stock, orders, branches, users, dashboard, notifications
 
 app = FastAPI(
     title="Inventory Management System API",
@@ -33,3 +33,4 @@ app.include_router(stock.router, prefix="/api/v1/stock", tags=["Stock"])
 app.include_router(orders.router, prefix="/api/v1/orders", tags=["Orders"])
 app.include_router(branches.router, prefix="/api/v1/branches", tags=["Branches"])
 app.include_router(users.router, prefix="/api/v1/users", tags=["Users"])
+app.include_router(notifications.router, prefix="/api/v1/notifications", tags=["Notifications"])
