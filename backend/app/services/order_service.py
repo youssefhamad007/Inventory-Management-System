@@ -73,6 +73,14 @@ class OrderService:
 
         # 1. Create order header
         order_data = order.model_dump(exclude={"items"})
+        
+        # Auto-generate order number if not provided (ORD-YYYYMMDD-XXXX)
+        if not order_data.get("order_number"):
+            from datetime import datetime
+            import random
+            timestamp = datetime.now().strftime("%Y%md%H%M")
+            order_data["order_number"] = f"ORD-{timestamp}-{random.randint(1000, 9999)}"
+            
         order_data["created_by"] = str(created_by)
 
         order_res = supabase.table("orders").insert(order_data).execute()

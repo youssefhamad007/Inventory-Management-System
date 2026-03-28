@@ -30,7 +30,7 @@ class OrderItemResponse(OrderItemBase):
     subtotal: Decimal
 
 class OrderBase(BaseModel):
-    order_number: str
+    order_number: Optional[str] = None
     order_type: OrderType
     status: OrderStatus = OrderStatus.DRAFT
     branch_id: UUID
