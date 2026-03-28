@@ -6,58 +6,67 @@ import { Button } from '@/components/ui/button';
 import { DataTable } from '@/components/DataTable';
 import { CommandPalette } from '@/components/CommandPalette';
 import type { ColumnDef } from '@tanstack/react-table';
-import { fetchDashboardSummary, fetchProducts } from '@/api/services';
-import type { Product } from '@/types/schema';
 
-const columns: ColumnDef<Product>[] = [
+// Mock API call to simulate data fetching for dashboard statistics
+const fetchDashboardStats = async () => {
+    // Simulate network delay
+    await new Promise((resolve) => setTimeout(resolve, 800));
+    return {
+        totalProducts: 1240,
+        activeOrders: 48,
+        lowStockAlerts: 12,
+        inventoryValue: 1450000.5,
+    };
+};
+
+type MockProduct = {
+    id: string;
+    sku: string;
+    name: string;
+    category: string;
+    stockLevel: number;
+    status: string;
+};
+
+// Generates an array of at least 1,000 objects for testing virtualization
+const generateMockProducts = (count: number): MockProduct[] => {
+    const categories = ['Electronics', 'Furniture', 'Office Supplies', 'Apparel', 'Accessories'];
+    const statuses = ['Active', 'Active', 'Active', 'Low Stock', 'Discontinued'];
+    return Array.from({ length: count }, (_, i) => ({
+        id: `prod-${i}`,
+        sku: `SKU-${10000 + i}`,
+        name: `Virtual Test Product ${i + 1}`,
+        category: categories[Math.floor(Math.random() * categories.length)],
+        stockLevel: Math.floor(Math.random() * 1000),
+        status: statuses[Math.floor(Math.random() * statuses.length)],
+    }));
+};
+
+const columns: ColumnDef<MockProduct>[] = [
     { accessorKey: 'sku', header: 'SKU' },
     { accessorKey: 'name', header: 'Product Name' },
-    {
-        accessorKey: 'category.name',
-        header: 'Category',
-        cell: ({ row }) => row.original.category?.name || 'Uncategorized',
-    },
-    {
-        accessorKey: 'unit_price',
-        header: 'Price',
-        cell: ({ row }) => `$${Number(row.original.unit_price).toFixed(2)}`,
-    },
-    {
-        accessorKey: 'is_active',
-        header: 'Status',
-        cell: ({ row }) => (
-            <span className={cn(
-                "px-2 py-1 rounded-full text-xs font-medium",
-                row.original.is_active ? "bg-emerald-500/10 text-emerald-500" : "bg-muted text-muted-foreground"
-            )}>
-                {row.original.is_active ? 'Active' : 'Inactive'}
-            </span>
-        ),
-    },
+    { accessorKey: 'category', header: 'Category' },
+    { accessorKey: 'stockLevel', header: 'Stock Level' },
+    { accessorKey: 'status', header: 'Status' },
 ];
 
 export function DashboardPage() {
     const { data: statsData, isLoading: statsLoading, isError, refetch, isFetching } = useQuery({
         queryKey: ['dashboard-stats'],
-        queryFn: fetchDashboardSummary,
+        queryFn: fetchDashboardStats,
     });
 
-    const { data: products } = useQuery({
-        queryKey: ['products'],
-        queryFn: () => fetchProducts(),
-    });
+    // Generate 1000 mock rows, memoized so it only happens once
+    const mockData = React.useMemo(() => generateMockProducts(1000), []);
 
-    const totalProducts = statsData?.total_products ?? products?.length ?? 0;
-    const activeOrders = statsData?.order_summary?.pending ?? 0;
-    const lowStockCount = statsData?.low_stock_alerts?.length ?? 0;
-    const inventoryValue = statsData?.total_inventory_value ?? 0;
-
-    const formattedValue = new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: 'USD',
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
-    }).format(Number(inventoryValue));
+    const formattedValue = !statsData?.inventoryValue
+        ? '$0.00'
+        : new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: 'USD',
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0,
+        }).format(statsData.inventoryValue);
 
     if (isError) {
         return (
@@ -95,31 +104,31 @@ export function DashboardPage() {
             <div className="shrink-0 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                 <StatCard
                     title="Total Products"
-                    value={statsLoading ? null : totalProducts}
+                    value={statsLoading ? null : statsData?.totalProducts}
                     icon={Package}
-                    trend="From database"
+                    trend="+4.2% from last month"
                     iconClassName="text-blue-500"
                 />
                 <StatCard
-                    title="Pending Orders"
-                    value={statsLoading ? null : activeOrders}
+                    title="Active Orders"
+                    value={statsLoading ? null : statsData?.activeOrders}
                     icon={TrendingUp}
-                    trend="Awaiting fulfillment"
+                    trend="+12 this week"
                     iconClassName="text-emerald-500"
                 />
                 <StatCard
                     title="Low Stock Alerts"
-                    value={statsLoading ? null : lowStockCount}
+                    value={statsLoading ? null : statsData?.lowStockAlerts}
                     icon={AlertCircle}
                     trend="Requires action"
                     iconClassName="text-amber-500 drop-shadow-[0_0_5px_rgba(245,158,11,0.5)]"
-                    isAlert={lowStockCount > 0}
+                    isAlert
                 />
                 <StatCard
                     title="Total Value"
                     value={statsLoading ? null : formattedValue}
-                    icon={Package}
-                    trend="Across all branches"
+                    icon={Package} // Can use currency icon
+                    trend="Across 3 branches"
                     iconClassName="text-indigo-500"
                 />
             </div>
@@ -128,12 +137,12 @@ export function DashboardPage() {
                 <div className="absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
                 <h3 className="shrink-0 font-semibold text-lg mb-4 text-primary/90 flex items-center gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-                    Product Inventory ({products?.length ?? 0} products)
+                    Product Inventory (Virtualization Test - 1000 rows)
                 </h3>
                 <div className="flex-1 min-h-0 relative z-10">
                     <DataTable
                         columns={columns}
-                        data={products ?? []}
+                        data={mockData}
                         pageCount={1}
                         pagination={{ pageIndex: 0, pageSize: 50 }}
                         onPaginationChange={() => { }}
@@ -155,6 +164,7 @@ interface StatCardProps {
     isAlert?: boolean;
 }
 
+// Sub-component for Dashboard Widgets
 function StatCard({ title, value, icon: Icon, trend, iconClassName, isAlert }: StatCardProps) {
     return (
         <div className={cn(
@@ -162,6 +172,7 @@ function StatCard({ title, value, icon: Icon, trend, iconClassName, isAlert }: S
             "hover:border-primary/30 hover:bg-muted/30 hover:shadow-[0_0_15px_rgba(0,184,217,0.15)] group",
             isAlert && "border-amber-500/30 bg-amber-500/10 hover:border-amber-500/50 hover:shadow-[0_0_15px_rgba(245,158,11,0.2)]"
         )}>
+            {/* Subtle top-edge highlight on hover */}
             <div className={cn(
                 "absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-primary/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300",
                 isAlert && "via-amber-500/50"
@@ -183,6 +194,7 @@ function StatCard({ title, value, icon: Icon, trend, iconClassName, isAlert }: S
                 <p className="text-xs text-muted-foreground mt-1">{trend}</p>
             </div>
 
+            {/* Decorative background glow blob */}
             <div className={cn(
                 "absolute -bottom-4 -right-4 w-24 h-24 rounded-full blur-2xl opacity-0 group-hover:opacity-20 transition-opacity duration-500 pointer-events-none",
                 isAlert ? "bg-amber-500" : "bg-primary"

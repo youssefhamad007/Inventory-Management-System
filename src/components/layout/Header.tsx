@@ -1,7 +1,5 @@
 import { Bell, User, Settings, Building, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useAuth } from '@/contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -17,27 +15,17 @@ import {
     PopoverTrigger,
 } from "@/components/ui/popover";
 
+// Mock Notifications
+const mockAlerts = [
+    { id: 1, title: 'Low Stock Alert', message: 'Ergonomic Office Chair is below minimum threshold.', time: '10m ago', unread: true },
+    { id: 2, title: 'New Transfer', message: '50 units of Wireless Mouse received from Warehouse.', time: '1h ago', unread: true },
+];
+
 export function Header() {
-    const { user, profile, logout } = useAuth();
-    const navigate = useNavigate();
-
-    const displayName = profile?.full_name || user?.email || 'User';
-    const displayEmail = user?.email || '';
-    const displayRole = profile?.role || 'user';
-
-    const handleLogout = async () => {
-        await logout();
-        navigate('/login');
-    };
-
     return (
         <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between border-b border-white/5 bg-black/20 px-6 backdrop-blur-xl shadow-[0_4px_30px_rgba(0,0,0,0.5)]">
             <div className="flex items-center flex-1">
-                {profile && (
-                    <span className="text-xs text-muted-foreground capitalize bg-muted/30 px-2 py-1 rounded-md">
-                        {displayRole}
-                    </span>
-                )}
+                {/* Future breadcrumbs or page title could go here */}
             </div>
 
             <div className="flex items-center space-x-4">
@@ -56,9 +44,19 @@ export function Header() {
                             <span className="text-xs text-muted-foreground cursor-pointer hover:underline">Mark all as read</span>
                         </div>
                         <div className="flex flex-col max-h-[300px] overflow-y-auto">
-                            <div className="flex items-start gap-3 p-4 text-center text-muted-foreground text-sm">
-                                <p className="w-full">No new notifications</p>
-                            </div>
+                            {mockAlerts.map(alert => (
+                                <div key={alert.id} className="flex items-start gap-3 p-4 hover:bg-muted/50 transition-colors cursor-pointer border-b last:border-0">
+                                    <div className="mt-0.5 rounded-full bg-destructive/10 p-1">
+                                        <Package className="h-4 w-4 text-destructive" />
+                                    </div>
+                                    <div className="flex-1 space-y-1">
+                                        <p className="text-sm font-medium leading-none">{alert.title}</p>
+                                        <p className="text-sm text-muted-foreground">{alert.message}</p>
+                                        <p className="text-xs text-muted-foreground">{alert.time}</p>
+                                    </div>
+                                    {alert.unread && <div className="h-2 w-2 mt-1.5 rounded-full bg-primary" />}
+                                </div>
+                            ))}
                         </div>
                     </PopoverContent>
                 </Popover>
@@ -73,8 +71,8 @@ export function Header() {
                     <DropdownMenuContent className="w-56" align="end" forceMount>
                         <DropdownMenuLabel className="font-normal">
                             <div className="flex flex-col space-y-1">
-                                <p className="text-sm font-medium leading-none">{displayName}</p>
-                                <p className="text-xs leading-none text-muted-foreground">{displayEmail}</p>
+                                <p className="text-sm font-medium leading-none">Sarah Connor</p>
+                                <p className="text-xs leading-none text-muted-foreground">sarah@nexusims.com</p>
                             </div>
                         </DropdownMenuLabel>
                         <DropdownMenuSeparator />
@@ -89,10 +87,7 @@ export function Header() {
                             </DropdownMenuItem>
                         </DropdownMenuGroup>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                            className="cursor-pointer text-destructive focus:text-destructive focus:bg-destructive/10"
-                            onClick={handleLogout}
-                        >
+                        <DropdownMenuItem className="cursor-pointer text-destructive focus:text-destructive focus:bg-destructive/10">
                             <LogOut className="mr-2 h-4 w-4" />
                             <span>Log out</span>
                         </DropdownMenuItem>
