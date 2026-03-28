@@ -11,10 +11,10 @@ export function Layout() {
             {/* <useRealtimeNotifications /> - will be instantiated where auth is present */}
 
             <Sidebar />
-            <div className="flex flex-1 flex-col overflow-hidden">
+            <div className="flex flex-1 flex-col overflow-hidden relative">
                 <Header />
-                <main className="flex-1 min-h-0 flex flex-col p-6">
-                    <div className="mx-auto max-w-7xl w-full h-full flex flex-col">
+                <main className="flex-1 overflow-y-auto p-6 scrollbar-hide">
+                    <div className="mx-auto max-w-7xl w-full">
                         <Outlet />
                     </div>
                 </main>
