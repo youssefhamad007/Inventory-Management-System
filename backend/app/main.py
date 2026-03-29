@@ -1,6 +1,8 @@
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
+import re
 import logging
+from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 # 1. Direct Module Imports (Bypasses __init__.py bottlenecks)
 from app.routers.dashboard import router as dashboard_router
@@ -23,9 +25,10 @@ app = FastAPI(
 )
 
 # CORS Configuration
+ALLOWED_ORIGIN_REGEX = re.compile(r"https://.*\.vercel\.app|http://localhost:5173")
+
 app.add_middleware(
     CORSMiddleware,
-    # Allow ANY Vercel subdomain and localhost
     allow_origin_regex=r"https://.*\.vercel\.app|http://localhost:5173",
     allow_credentials=True,
     allow_methods=["*"],
@@ -33,20 +36,21 @@ app.add_middleware(
     expose_headers=["*"],
 )
 
-# Global Exception Handler to ensure CORS headers are sent on 500 errors
-from fastapi import Request
-from fastapi.responses import JSONResponse
-
+# Global Exception Handler — validates origin and hides internal details
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
-    logger.error(f"Global Error: {str(exc)}", exc_info=True)
+    logger.error(f"Global Error: {type(exc).__name__}", exc_info=True)
+
+    origin = request.headers.get("Origin", "")
+    headers = {}
+    if origin and ALLOWED_ORIGIN_REGEX.fullmatch(origin):
+        headers["Access-Control-Allow-Origin"] = origin
+        headers["Access-Control-Allow-Credentials"] = "true"
+
     return JSONResponse(
         status_code=500,
-        content={"detail": "Internal Server Error", "message": str(exc)},
-        headers={
-            "Access-Control-Allow-Origin": request.headers.get("Origin", "*"),
-            "Access-Control-Allow-Credentials": "true",
-        }
+        content={"detail": "Internal Server Error"},
+        headers=headers
     )
 
 @app.get("/")
