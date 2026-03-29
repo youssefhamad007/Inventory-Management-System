@@ -39,7 +39,8 @@ export function Header() {
         }
     });
 
-    const unreadCount = notifications?.filter((n: any) => !n.is_read).length || 0;
+    const notificationList = Array.isArray(notifications) ? notifications : [];
+    const unreadCount = notificationList.filter((n: any) => !n.is_read).length;
 
     return (
         <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between border-b border-white/5 bg-black/20 px-6 backdrop-blur-xl shadow-[0_4px_30px_rgba(0,0,0,0.5)]">
@@ -71,12 +72,12 @@ export function Header() {
                             </span>
                         </div>
                         <div className="flex flex-col max-h-[300px] overflow-y-auto custom-scrollbar">
-                            {notifications?.length === 0 && (
+                            {notificationList.length === 0 && (
                                 <div className="p-8 text-center text-muted-foreground text-sm italic">
                                     Systems nominal. No pending alerts.
                                 </div>
                             )}
-                            {notifications?.map((alert: any) => (
+                            {notificationList.map((alert: any) => (
                                 <div key={alert.id} className="flex items-start gap-3 p-4 hover:bg-white/5 transition-colors cursor-pointer border-b border-white/5 last:border-0">
                                     <div className="mt-0.5 rounded-full bg-primary/10 p-1">
                                         <Package className="h-4 w-4 text-primary" />
