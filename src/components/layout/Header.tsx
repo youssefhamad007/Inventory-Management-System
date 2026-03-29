@@ -16,20 +16,27 @@ import {
     PopoverContent,
     PopoverTrigger,
 } from "@/components/ui/popover";
-import { useQuery } from '@tanstack/react-query';
-import { apiClient } from '@/api/client';
+import { fetchNotifications, markAllNotificationsRead } from '@/api/notifications';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 
 export function Header() {
     const { logout } = useAuth();
     const { data: profile } = useProfile();
+    const queryClient = useQueryClient();
 
     const { data: notifications } = useQuery({
         queryKey: ['notifications'],
-        queryFn: async () => {
-            const res = await apiClient.get('notifications');
-            return res.data;
-        },
+        queryFn: () => fetchNotifications(),
         refetchInterval: 60000
+    });
+
+    const markAllReadMutation = useMutation({
+        mutationFn: markAllNotificationsRead,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['notifications'] });
+            toast.success('All notifications marked as read');
+        }
     });
 
     const unreadCount = notifications?.filter((n: any) => !n.is_read).length || 0;
@@ -56,7 +63,12 @@ export function Header() {
                     <PopoverContent align="end" className="w-80 p-0 bg-black/90 border-white/10 backdrop-blur-xl">
                         <div className="flex items-center justify-between px-4 py-3 border-b border-white/5">
                             <span className="text-sm font-semibold">Notifications</span>
-                            <span className="text-xs text-primary cursor-pointer hover:underline">Mark all as read</span>
+                            <span
+                                onClick={() => markAllReadMutation.mutate()}
+                                className="text-xs text-primary cursor-pointer hover:underline"
+                            >
+                                Mark all as read
+                            </span>
                         </div>
                         <div className="flex flex-col max-h-[300px] overflow-y-auto custom-scrollbar">
                             {notifications?.length === 0 && (

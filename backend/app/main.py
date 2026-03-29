@@ -25,12 +25,13 @@ app = FastAPI(
 # CORS Configuration
 origins = [
     "http://localhost:5173", # Local development
-    "https://inventory-management-system-bbvdkhegv.vercel.app", # Your actual frontend URL
+    "https://inventory-management-system-silk-seven.vercel.app", # Your actual frontend URL
 ]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins, 
+    allow_origin_regex=r"https://inventory-management-system-.*\.vercel\.app",
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

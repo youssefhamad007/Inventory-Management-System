@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import type { ColumnDef } from '@tanstack/react-table';
-import { apiClient } from '@/api/client';
+import { fetchUsers, deleteUser } from '@/api/users';
 import { toast } from 'sonner';
 import { InviteUserModal } from '@/components/InviteUserModal';
 
@@ -17,16 +17,11 @@ export function UsersPage() {
 
     const { data: users, isLoading } = useQuery({
         queryKey: ['users'],
-        queryFn: async () => {
-            const res = await apiClient.get('/users/');
-            return res.data;
-        },
+        queryFn: () => fetchUsers(),
     });
 
     const deleteMutation = useMutation({
-        mutationFn: async (id: string) => {
-            await apiClient.delete(`/users/${id}`);
-        },
+        mutationFn: (id: string) => deleteUser(id),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['users'] });
             toast.success('User access revoked');

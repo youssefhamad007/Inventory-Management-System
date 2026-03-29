@@ -21,3 +21,12 @@ async def update_branch(id: str, branch_data: dict, user=Depends(require_admin))
     supabase = get_admin_client()
     result = supabase.table("branches").update(branch_data).eq("id", id).execute()
     return result.data[0]
+
+@router.delete("/{id}")
+async def delete_branch(id: str, user=Depends(require_admin)):
+    supabase = get_admin_client()
+    # Perform soft-delete by setting is_active=False
+    result = supabase.table("branches").update({"is_active": False}).eq("id", id).execute()
+    if not result.data:
+        raise HTTPException(status_code=404, detail="Branch not found")
+    return {"message": "Branch deactivated", "id": id}
