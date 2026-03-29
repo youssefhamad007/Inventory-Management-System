@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/lib/supabase';
+import { apiClient } from '@/api/client';
 import { useAuth } from '@/contexts/AuthContext';
 
 export interface UserProfile {
@@ -11,33 +11,18 @@ export interface UserProfile {
 }
 
 export function useProfile() {
-    const { user } = useAuth();
+    const { user, session } = useAuth();
 
     return useQuery<UserProfile | null>({
         queryKey: ['profile', user?.id],
         queryFn: async () => {
             if (!user?.id) return null;
 
-            // Bulletproof test account override for frontend consistency
-            if (user.email === 'admin@ims-project.com') {
-                return {
-                    id: user.id,
-                    full_name: user.user_metadata?.full_name || 'Admin User',
-                    role: 'admin',
-                    branch_id: null,
-                    is_active: true
-                };
-            }
-
-            const { data, error } = await supabase
-                .from('profiles')
-                .select('id, full_name, role, branch_id, is_active')
-                .eq('id', user.id)
-                .single();
-            if (error) return null;
+            // Fetch profile strictly from the backend API
+            const { data } = await apiClient.get('users/me');
             return data as UserProfile;
         },
-        enabled: !!user?.id,
+        enabled: !!user?.id && !!session,
         staleTime: 5 * 60 * 1000,
         retry: 1,
     });

@@ -28,9 +28,9 @@ router = APIRouter()
     ),
 )
 async def list_orders(
-    user: UserContext = Depends(require_staff),
+    user: UserContext = Depends(require_staff()),
 ) -> List[OrderResponse]:
-    return OrderService.list_orders()
+    return OrderService.list_orders(user["jwt"])
 
 
 @router.get(
@@ -44,9 +44,9 @@ async def list_orders(
 )
 async def get_order(
     id: UUID,
-    user: UserContext = Depends(require_manager),
+    user: UserContext = Depends(require_manager()),
 ) -> OrderResponse:
-    return OrderService.get_order(id)
+    return OrderService.get_order(user["jwt"], id)
 
 
 @router.post(
@@ -56,14 +56,14 @@ async def get_order(
     summary="Create a new order",
     description=(
         "Create a new purchase or sales order with one or more line items.\n\n"
-        "- **Roles**: Admin, Manager, and Staff"
+        "- **Roles**: Admin and Manager"
     ),
 )
 async def create_order(
     order: OrderCreate,
-    user: UserContext = Depends(require_staff),
+    user: UserContext = Depends(require_manager()),
 ) -> OrderResponse:
-    return OrderService.create_order(order, user["id"])
+    return OrderService.create_order(user["jwt"], order, user["id"])
 
 
 @router.put(
@@ -76,15 +76,14 @@ async def create_order(
         "for each line item using the StockService:\n"
         "- Purchase orders increase stock (inbound)\n"
         "- Sales orders decrease stock (outbound)\n\n"
-        "- **Roles**: Admin, Manager, and Staff"
+        "- **Roles**: Admin and Manager"
     ),
 )
 async def update_order_status(
     id: UUID,
     status_update: OrderUpdate,
-    user: UserContext = Depends(require_staff),
+    user: UserContext = Depends(require_manager()),
 ) -> OrderResponse:
     if not status_update.status:
         raise HTTPException(status_code=400, detail="Status is required")
-    return OrderService.update_order_status(id, status_update.status, user["id"])
-
+    return OrderService.update_order_status(user["jwt"], id, status_update.status, user["id"])

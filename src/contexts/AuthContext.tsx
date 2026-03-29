@@ -21,7 +21,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Fetch profile from profiles table
+  // Fetch profile strictly from the backend API
   const fetchProfile = useCallback(async (userId: string, jwt: string) => {
     try {
       const res = await apiClient.get('users/me', {
@@ -31,17 +31,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setProfile(res.data ?? null);
       }
     } catch {
-      // If backend is unreachable, fall back to supabase profile query
-      try {
-        const { data } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', userId)
-          .single();
-        setProfile(data as Profile | null);
-      } catch {
-        setProfile(null);
-      }
+      // If backend is unreachable, set profile to null — do NOT fall back to direct Supabase queries
+      setProfile(null);
     }
   }, []);
 
