@@ -4,7 +4,7 @@ from decimal import Decimal
 
 from fastapi import HTTPException, status
 
-from app.db.supabase import get_supabase_client, get_admin_client
+from app.db.supabase import get_user_client
 from app.models.order import (
     OrderCreate,
     OrderUpdate,
@@ -32,11 +32,12 @@ class OrderService:
 
     @staticmethod
     def list_orders(
+        jwt: str,
         order_type: Optional[OrderType] = None,
         status: Optional[OrderStatus] = None,
         branch_id: Optional[UUID] = None,
     ) -> List[OrderResponse]:
-        supabase = get_supabase_client()
+        supabase = get_user_client(jwt)
         query = supabase.table("orders").select("*, items:order_items(*, product:products(name, sku)), branch:branches(name), supplier:suppliers(name)")
 
         if order_type is not None:
@@ -51,8 +52,8 @@ class OrderService:
         return [OrderService._map_order_record(rec) for rec in records]
 
     @staticmethod
-    def get_order(order_id: UUID) -> OrderResponse:
-        supabase = get_supabase_client()
+    def get_order(jwt: str, order_id: UUID) -> OrderResponse:
+        supabase = get_user_client(jwt)
         result = (
             supabase.table("orders")
             .select("*, items:order_items(*, product:products(name, sku)), branch:branches(name), supplier:suppliers(name)")
@@ -68,8 +69,8 @@ class OrderService:
         return OrderService._map_order_record(result.data)
 
     @staticmethod
-    def create_order(order: OrderCreate, created_by: UUID) -> OrderResponse:
-        supabase = get_admin_client()
+    def create_order(jwt: str, order: OrderCreate, created_by: UUID) -> OrderResponse:
+        supabase = get_user_client(jwt)
 
         # 1. Create order header
         order_data = order.model_dump(mode="json", exclude={"items"})
@@ -108,10 +109,11 @@ class OrderService:
             {"total_amount": str(total_amount)}
         ).eq("id", new_order["id"]).execute()
 
-        return OrderService.get_order(UUID(new_order["id"]))
+        return OrderService.get_order(jwt, UUID(new_order["id"]))
 
     @staticmethod
     def update_order_status(
+        jwt: str,
         order_id: UUID,
         new_status: OrderStatus,
         performed_by: UUID,
@@ -119,13 +121,9 @@ class OrderService:
         """
         Update the order status and, when transitioning to DELIVERED,
         adjust stock levels for each line item via StockService.
-
-        Stock adjustments:
-        - PURCHASE order + DELIVERED => stock IN (purchase_in)
-        - SALE order + DELIVERED => stock OUT (sale_out)
         """
         # 1. Get current order as a typed model
-        order = OrderService.get_order(order_id)
+        order = OrderService.get_order(jwt, order_id)
         current_status = order.status
 
         if current_status == new_status:
@@ -151,15 +149,12 @@ class OrderService:
                     txn_type=txn_type,
                     notes=f"Processed from order {order.order_number} ({new_status.value})",
                 )
-                # If any adjustment fails, an HTTPException is raised and
-                # the order status will not be updated.
-                StockService.adjust_stock(adj_req, performed_by)
+                StockService.adjust_stock(jwt, adj_req, performed_by)
 
         # 3. Update status after successful stock adjustments
-        supabase = get_admin_client()
+        supabase = get_user_client(jwt)
         supabase.table("orders").update(
             {"status": new_status.value}
         ).eq("id", str(order_id)).execute()
 
-        return OrderService.get_order(order_id)
-
+        return OrderService.get_order(jwt, order_id)

@@ -4,20 +4,20 @@ from typing import List, Dict, Any, Optional
 
 from fastapi import HTTPException, status
 
-from app.db.supabase import get_supabase_client, get_admin_client
+from app.db.supabase import get_user_client
 
 
 class DashboardService:
     @staticmethod
-    def get_summary() -> Dict[str, Any]:
-        supabase = get_admin_client()
+    def get_summary(jwt: str) -> Dict[str, Any]:
+        supabase = get_user_client(jwt)
 
         # Total inventory value: manual aggregation since RPC doesn't exist
         stock_result = supabase.table("stock_levels").select("quantity, product_id, product:products!product_id(unit_price)").execute()
         total_value = sum(
             (Decimal(str(item.get("quantity", 0))) * Decimal(str((item.get("product") or {}).get("unit_price", 0)))
             for item in (stock_result.data or [])),
-            Decimal("0") # <-- Added this default start value
+            Decimal("0")
         )
 
         low_stock_result = (
@@ -63,12 +63,12 @@ class DashboardService:
         }
 
     @staticmethod
-    def get_analytics() -> Dict[str, Any]:
+    def get_analytics(jwt: str) -> Dict[str, Any]:
         """
         Generate a 30-day daily valuation trend by taking the current total value
         and walking backwards through stock transactions.
         """
-        supabase = get_admin_client()
+        supabase = get_user_client(jwt)
         
         # Current Value
         stock_result = supabase.table("stock_levels").select("quantity, product_id, product:products!product_id(unit_price)").execute()
@@ -83,7 +83,7 @@ class DashboardService:
         
         # Group deltas by day & Aggregate movement by category
         deltas_by_day = {}
-        category_movement = {} # { "category_name": { "in": 0, "out": 0 } }
+        category_movement = {}
         
         # Combined query to get all needed info for analytics
         all_txns = supabase.table("stock_transactions").select(
@@ -134,7 +134,7 @@ class DashboardService:
             valuation_data.append({
                 "month": label,
                 "value": round(running_value, 2),
-                "cost": round(running_value * 0.6, 2) # mock cost margin
+                "cost": round(running_value * 0.6, 2)  # mock cost margin
             })
             
         return {
@@ -144,4 +144,3 @@ class DashboardService:
                 for name, data in category_movement.items()
             ]
         }
-

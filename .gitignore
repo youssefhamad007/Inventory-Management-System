@@ -50,3 +50,4 @@ wheels/
 .venv
 venv/
 ENV/
+CLAUDE.md
