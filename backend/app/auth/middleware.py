@@ -29,8 +29,6 @@ async def get_current_user(auth: HTTPAuthorizationCredentials = Depends(security
         supabase.auth.set_session(access_token=token, refresh_token="")
 
         # We use getting the user from Supabase Auth to verify the token
-        # This also ensures the token is valid and not blacklisted/revoked
-        # It's an extra network call but safer for Supabase RLS integration
         auth_response = supabase.auth.get_user(token)
         if not auth_response.user:
             raise HTTPException(
@@ -38,7 +36,7 @@ async def get_current_user(auth: HTTPAuthorizationCredentials = Depends(security
                 detail="Invalid or expired token",
             )
 
-        # Fetch the user's profile using the admin client to bypass RLS infinite recursion!
+        # Fetch the user's profile using the admin client to bypass RLS infinite recursion
         supabase_admin = get_admin_client()
         profile_response = supabase_admin.table("profiles").select("*").eq("id", auth_response.user.id).execute()
 
@@ -46,7 +44,6 @@ async def get_current_user(auth: HTTPAuthorizationCredentials = Depends(security
 
         # Basic profile and activation checks
         if not profile:
-            print(f"AUTH DEBUG: User {auth_response.user.email} has no profile in profiles table")
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Profile not found for authenticated user",
@@ -58,18 +55,8 @@ async def get_current_user(auth: HTTPAuthorizationCredentials = Depends(security
                 detail="User account is inactive",
             )
 
-        # Bulletproof test account override to ensure testing remains unblocked
-        override_role = "admin" if auth_response.user.email == "admin@ims-project.com" else None
-        role = override_role or profile.get("role") or "staff"
-
-        # Self-heal: if the DB has the wrong role, correct it so frontend direct queries are consistent
-        if override_role and profile.get("role") != override_role:
-            try:
-                supabase_admin.table("profiles").update({"role": override_role}).eq(
-                    "id", str(auth_response.user.id)
-                ).execute()
-            except Exception:
-                pass  # Non-fatal — the in-memory override still applies
+        # Role is strictly from the database profile — no overrides
+        role = profile.get("role", "staff")
 
         if role not in {"admin", "manager", "staff"}:
             raise HTTPException(
@@ -87,6 +74,8 @@ async def get_current_user(auth: HTTPAuthorizationCredentials = Depends(security
 
         return user_data
 
+    except HTTPException:
+        raise  # Re-raise FastAPI HTTP exceptions as-is (403, 401, etc.)
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

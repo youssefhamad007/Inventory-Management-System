@@ -38,9 +38,9 @@ router = APIRouter()
     ),
 )
 async def get_dashboard_summary(
-    user: UserContext = Depends(require_staff)
+    user: UserContext = Depends(require_staff())
 ) -> DashboardSummary:
-    summary = DashboardService.get_summary()
+    summary = DashboardService.get_summary(user["jwt"])
     return DashboardSummary(**summary)
 
 
@@ -53,7 +53,6 @@ async def get_dashboard_summary(
     ),
 )
 async def get_dashboard_analytics(
-    user: UserContext = Depends(require_staff)
+    user: UserContext = Depends(require_staff())
 ) -> dict:
-    return DashboardService.get_analytics()
-
+    return DashboardService.get_analytics(user["jwt"])

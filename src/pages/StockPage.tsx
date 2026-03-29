@@ -32,7 +32,6 @@ export function StockPage() {
             branch_id: row.branch_id,
             quantity_change: change,
             txn_type: change > 0 ? 'adjustment_in' : 'adjustment_out',
-            performed_by: 'current-user-uuid',
             notes: 'Quick adjust from UI',
         });
     };
