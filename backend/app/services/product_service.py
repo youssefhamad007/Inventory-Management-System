@@ -36,14 +36,19 @@ class ProductService:
 
     @staticmethod
     def create_product(product: ProductCreate) -> dict:
-        supabase = get_admin_client() # Bypass RLS for creation if needed, or use scoped client
-        result = supabase.table("products").insert(product.model_dump()).execute()
+        supabase = get_admin_client() 
+        # Added mode="json" here!
+        result = supabase.table("products").insert(product.model_dump(mode="json")).execute()
         return result.data[0]
 
     @staticmethod
     def update_product(product_id: UUID, product: ProductUpdate) -> dict:
         supabase = get_admin_client()
-        result = supabase.table("products").update(product.model_dump(exclude_unset=True)).eq("id", str(product_id)).execute()
+        # Added mode="json" here!
+        result = supabase.table("products").update(
+            product.model_dump(mode="json", exclude_unset=True)
+        ).eq("id", str(product_id)).execute()
+        
         if not result.data:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
         return result.data[0]

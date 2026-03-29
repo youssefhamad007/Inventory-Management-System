@@ -28,7 +28,7 @@ async def get_product(
 @router.post("/", response_model=dict, status_code=status.HTTP_201_CREATED)
 async def create_product(
     product: ProductCreate,
-    user=Depends(require_manager())
+    user=Depends(require_manager)
 ):
     return ProductService.create_product(product)
 
@@ -36,7 +36,7 @@ async def create_product(
 async def update_product(
     id: UUID,
     product: ProductUpdate,
-    user=Depends(require_manager())
+    user=Depends(require_manager)
 ):
     return ProductService.update_product(id, product)
 

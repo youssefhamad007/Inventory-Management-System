@@ -8,7 +8,7 @@ router = APIRouter()
 
 @router.get("/", summary="Get user notifications")
 async def list_notifications(
-    user: UserContext = Depends(require_staff())
+    user: UserContext = Depends(require_staff)
 ) -> List[Dict[str, Any]]:
     supabase = get_supabase_client()
     result = supabase.table("notifications").select("*").eq("user_id", user["id"]).order("created_at", desc=True).limit(20).execute()
@@ -16,7 +16,7 @@ async def list_notifications(
 
 @router.post("/mark-all-read", summary="Mark all notifications as read")
 async def mark_all_read(
-    user: UserContext = Depends(require_staff())
+    user: UserContext = Depends(require_staff)
 ):
     supabase = get_supabase_client()
     supabase.table("notifications").update({"is_read": True}).eq("user_id", user["id"]).eq("is_read", False).execute()

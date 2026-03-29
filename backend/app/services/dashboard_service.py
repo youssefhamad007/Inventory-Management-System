@@ -15,8 +15,9 @@ class DashboardService:
         # Total inventory value: manual aggregation since RPC doesn't exist
         stock_result = supabase.table("stock_levels").select("quantity, product_id, product:products!product_id(unit_price)").execute()
         total_value = sum(
-            Decimal(str(item.get("quantity", 0))) * Decimal(str((item.get("product") or {}).get("unit_price", 0)))
-            for item in (stock_result.data or [])
+            (Decimal(str(item.get("quantity", 0))) * Decimal(str((item.get("product") or {}).get("unit_price", 0)))
+            for item in (stock_result.data or [])),
+            Decimal("0") # <-- Added this default start value
         )
 
         low_stock_result = (
@@ -113,17 +114,21 @@ class DashboardService:
             
             deltas_by_day[day_str] = deltas_by_day.get(day_str, 0) + val_change
             
-        valuation_data = []
-        running_value = current_value
+        # 1. Calculate the net change over the last 30 days
+        total_historical_delta = sum(deltas_by_day.values())
         
-        # Walk forwards from day 29 to 0
+        # 2. Rewind the clock: Value 30 days ago = Today's Value - Net Change
+        running_value = current_value - total_historical_delta
+        
+        valuation_data = []
+        
+        # 3. Walk forwards from day 29 to 0
         for i in range(29, -1, -1):
             target_day = today - timedelta(days=i)
             day_key = target_day.strftime("%Y-%m-%d")
             
-            if i < 29:
-                # Add yesterday's delta to get today's rolling value
-                running_value += deltas_by_day.get(day_key, 0)
+            # Add that specific day's delta to progress the timeline forward
+            running_value += deltas_by_day.get(day_key, 0)
                 
             label = (target_day.strftime("%d %b").lstrip("0")) if i > 0 else "Today"
             valuation_data.append({
