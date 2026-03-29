@@ -72,13 +72,13 @@ class OrderService:
         supabase = get_admin_client()
 
         # 1. Create order header
-        order_data = order.model_dump(exclude={"items"})
+        order_data = order.model_dump(mode="json", exclude={"items"})
         
         # Auto-generate order number if not provided (ORD-YYYYMMDD-XXXX)
         if not order_data.get("order_number"):
             from datetime import datetime
             import random
-            timestamp = datetime.now().strftime("%Y%md%H%M")
+            timestamp = datetime.now().strftime("%Y%m%d%H%M")
             order_data["order_number"] = f"ORD-{timestamp}-{random.randint(1000, 9999)}"
             
         order_data["created_by"] = str(created_by)
@@ -95,7 +95,7 @@ class OrderService:
         items_data = []
         total_amount = Decimal("0.00")
         for item in order.items:
-            item_dict = item.model_dump()
+            item_dict = item.model_dump(mode="json")
             item_dict["order_id"] = new_order["id"]
             items_data.append(item_dict)
             total_amount += item.unit_price * item.quantity

@@ -2,7 +2,8 @@ from typing import List, Optional
 from uuid import UUID
 from fastapi import HTTPException, status
 from app.db.supabase import get_supabase_client, get_admin_client
-from app.models.stock import StockAdjustmentRequest, StockTransferRequest
+# Added TransactionType to the import!
+from app.models.stock import StockAdjustmentRequest, StockTransferRequest, TransactionType
 
 class StockService:
     @staticmethod
@@ -11,7 +12,10 @@ class StockService:
         product_id: Optional[UUID] = None
     ) -> List[dict]:
         supabase = get_admin_client()
-        query = supabase.table("stock_levels").select("*, product:products!product_id(name, sku, min_stock_level), products!product_id(name, sku, min_stock_level), branch:branches!branch_id(name)")
+        # Removed the duplicate products join!
+        query = supabase.table("stock_levels").select(
+            "*, product:products!product_id(name, sku, min_stock_level), branch:branches!branch_id(name)"
+        )
         
         if branch_id:
             query = query.eq("branch_id", str(branch_id))
@@ -27,7 +31,7 @@ class StockService:
         Calls the PostgreSQL RPC function 'adjust_stock_level' defined in the DB.
         This ensures atomic updates and audit logging.
         """
-        supabase = get_admin_client() # Needs elevated access to call RPC and bypass RLS for triggers
+        supabase = get_admin_client() 
         
         result = supabase.rpc("adjust_stock_level", {
             "p_product_id": str(adj.product_id),
@@ -50,29 +54,23 @@ class StockService:
     def transfer_stock(transfer: StockTransferRequest, performed_by: UUID) -> dict:
         """
         Inter-branch transfer: involves two adjustments (out from source, in to target).
-        Ideally this should be a single transactional function in SQL, but for now
-        we can call two RPCs or implement a specific 'transfer_stock' RPC.
-        Given the simplicity, we'll implement it here using two adjustments.
         """
-        # Note: True atomicity across two RPC calls is harder in the service layer.
-        # A specific 'transfer_stock' RPC would be preferred.
-        
-        # 1. Deduct from source
+        # 1. Deduct from source (Using Enum!)
         out_adj = StockAdjustmentRequest(
             product_id=transfer.product_id,
             branch_id=transfer.from_branch_id,
             quantity_change=-transfer.quantity,
-            txn_type="transfer_out",
+            txn_type=TransactionType.TRANSFER_OUT,
             notes=f"Transfer to {transfer.to_branch_id}. {transfer.notes or ''}"
         )
         StockService.adjust_stock(out_adj, performed_by)
         
-        # 2. Add to target
+        # 2. Add to target (Using Enum!)
         in_adj = StockAdjustmentRequest(
             product_id=transfer.product_id,
             branch_id=transfer.to_branch_id,
             quantity_change=transfer.quantity,
-            txn_type="transfer_in",
+            txn_type=TransactionType.TRANSFER_IN,
             notes=f"Transfer from {transfer.from_branch_id}. {transfer.notes or ''}"
         )
         return StockService.adjust_stock(in_adj, performed_by)

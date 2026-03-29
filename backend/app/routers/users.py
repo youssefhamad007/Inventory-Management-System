@@ -6,7 +6,7 @@ from app.auth.middleware import get_current_user
 router = APIRouter()
 
 @router.get("/")
-async def list_users(user=Depends(require_admin())):
+async def list_users(user=Depends(require_admin)):
     supabase = get_admin_client()
     # Profiles table extends auth.users
     result = supabase.table("profiles").select("*, branches(name)").execute()
@@ -19,7 +19,7 @@ async def get_my_profile(user=Depends(get_current_user)):
     return result.data
 
 @router.put("/{id}/role")
-async def update_user_role(id: str, role_update: dict, user=Depends(require_admin())):
+async def update_user_role(id: str, role_update: dict, user=Depends(require_admin)):
     if role_update.get("role") not in ["admin", "manager", "staff"]:
         raise HTTPException(status_code=400, detail="Invalid role")
         
@@ -39,7 +39,7 @@ class UserCreate(BaseModel):
     branch_id: Optional[str] = None
 
 @router.post("/create", summary="Directly create user")
-async def create_user(user_data: UserCreate, user=Depends(require_admin())):
+async def create_user(user_data: UserCreate, user=Depends(require_admin)):
     supabase_admin = get_admin_client()
     
     auth_res = supabase_admin.auth.admin.create_user({
@@ -66,7 +66,7 @@ async def create_user(user_data: UserCreate, user=Depends(require_admin())):
     return {"message": "User created successfully", "id": new_uid}
 
 @router.delete("/{id}", summary="Delete user")
-async def delete_user(id: str, user=Depends(require_admin())):
+async def delete_user(id: str, user=Depends(require_admin)):
     supabase_admin = get_admin_client()
     
     # Supabase allows admin.delete_user via its auth module
