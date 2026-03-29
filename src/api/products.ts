@@ -6,7 +6,7 @@ export async function fetchProducts(params?: { search?: string; category_id?: st
 }
 
 export async function fetchProduct(id: string) {
-    const { data } = await apiClient.get(`/api/v1/products/${id}`);
+    const { data } = await apiClient.get(`products/${id}`);
     return data;
 }
 
@@ -27,11 +27,11 @@ export async function createProduct(product: {
 }
 
 export async function updateProduct(id: string, product: Record<string, unknown>) {
-    const { data } = await apiClient.put(`/api/v1/products/${id}`, product);
+    const { data } = await apiClient.put(`products/${id}`, product);
     return data;
 }
 
 export async function deleteProduct(id: string) {
-    const { data } = await apiClient.delete(`/api/v1/products/${id}`);
+    const { data } = await apiClient.delete(`products/${id}`);
     return data;
 }

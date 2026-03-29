@@ -9,7 +9,7 @@ import type { ColumnDef } from '@tanstack/react-table';
 import type { Product } from '@/types/schema';
 import { toast } from 'sonner';
 
-import { fetchProducts, createProduct } from '@/api/products';
+import { fetchProducts, createProduct, deleteProduct } from '@/api/products';
 import { useProfile } from '@/hooks/useProfile';
 
 export function ProductsPage() {
@@ -50,6 +50,21 @@ export function ProductsPage() {
         });
     };
 
+    const deleteMutation = useMutation({
+        mutationFn: (id: string) => deleteProduct(id),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['products'] });
+            toast.success('Product deactivated');
+        },
+        onError: () => toast.error('Failed to deactivate product')
+    });
+
+    const handleDelete = (id: string) => {
+        if (confirm('Are you sure you want to deactivate this product?')) {
+            deleteMutation.mutate(id);
+        }
+    };
+
     const columns: ColumnDef<Product>[] = [
         {
             accessorKey: 'sku',
@@ -86,10 +101,17 @@ export function ProductsPage() {
         {
             id: 'actions',
             header: '',
-            cell: () => (
+            cell: ({ row }) => (
                 <div className="flex justify-end gap-2 pr-4">
                     <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-primary/20 hover:text-primary"><Edit2 className="h-4 w-4" /></Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-destructive/20 hover:text-destructive"><Trash2 className="h-4 w-4" /></Button>
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 hover:bg-destructive/20 hover:text-destructive text-destructive/50 hover:text-destructive"
+                        onClick={() => handleDelete(row.original.id)}
+                    >
+                        <Trash2 className="h-4 w-4" />
+                    </Button>
                 </div>
             )
         }

@@ -2,7 +2,9 @@ import axios from 'axios';
 
 // The base URL for the backend API, driven by environment variables.
 const rawBaseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
-const API_BASE_URL = rawBaseURL.endsWith('/v1') || rawBaseURL.endsWith('/v1/')
+
+// Ensures the base URL always ends with /v1/ for consistency with the FastAPI backend
+const API_BASE_URL = rawBaseURL.match(/\/v1\/?$/)
   ? (rawBaseURL.endsWith('/') ? rawBaseURL : `${rawBaseURL}/`)
   : `${rawBaseURL.replace(/\/$/, '')}/v1/`;
 

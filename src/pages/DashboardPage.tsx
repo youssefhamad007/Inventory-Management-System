@@ -8,7 +8,7 @@ import {
     DollarSign
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
-import { apiClient } from '@/api/client';
+import { fetchDashboardSummary } from '@/api/dashboard';
 import { cn } from '@/lib/utils';
 
 interface DashboardStats {
@@ -24,10 +24,7 @@ interface DashboardStats {
 export function DashboardPage() {
     const { data: stats, isLoading } = useQuery<DashboardStats>({
         queryKey: ['dashboard-stats'],
-        queryFn: async () => {
-            const res = await apiClient.get('dashboard/summary');
-            return res.data;
-        },
+        queryFn: () => fetchDashboardSummary(),
         refetchInterval: 30000, // Refresh every 30s
     });
 

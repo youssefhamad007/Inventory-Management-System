@@ -2,7 +2,7 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { Calendar, TrendingUp, Package, DollarSign, Activity, FileDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useQuery } from '@tanstack/react-query';
-import { apiClient } from '@/api/client';
+import { fetchAnalytics } from '@/api/dashboard';
 import { cn } from '@/lib/utils';
 
 interface AnalyticsData {
@@ -13,10 +13,7 @@ interface AnalyticsData {
 export function ReportsPage() {
     const { data: analytics, isLoading } = useQuery<AnalyticsData>({
         queryKey: ['analytics'],
-        queryFn: async () => {
-            const res = await apiClient.get('dashboard/analytics');
-            return res.data;
-        }
+        queryFn: () => fetchAnalytics()
     });
 
     if (isLoading) {

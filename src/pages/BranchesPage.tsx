@@ -3,11 +3,14 @@ import { useQuery } from '@tanstack/react-query';
 import { Building2, Plus, MapPin, Phone, Calendar, Trash2, Edit2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { fetchBranches } from '@/api/branches';
+import { fetchBranches, deleteBranch } from '@/api/branches';
 import { useProfile } from '@/hooks/useProfile';
 import { CreateBranchModal } from '@/components/CreateBranchModal';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 
 export function BranchesPage() {
+    const queryClient = useQueryClient();
     const { data: profile, isLoading: isProfileLoading } = useProfile();
     // Default to admin-view while loading to prevent flicker for owners
     const isAdmin = isProfileLoading || profile?.role === 'admin';
@@ -17,6 +20,21 @@ export function BranchesPage() {
         queryKey: ['branches'],
         queryFn: () => fetchBranches(),
     });
+
+    const deleteMutation = useMutation({
+        mutationFn: (id: string) => deleteBranch(id),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['branches'] });
+            toast.success('Branch deactivated');
+        },
+        onError: () => toast.error('Failed to deactivate branch')
+    });
+
+    const handleDelete = (id: string) => {
+        if (confirm('Are you sure you want to deactivate this branch?')) {
+            deleteMutation.mutate(id);
+        }
+    };
 
     if (isLoading) return <div className="flex items-center justify-center h-64"><Building2 className="animate-pulse text-primary h-12 w-12" /></div>;
 
@@ -79,7 +97,13 @@ export function BranchesPage() {
                                 <Button variant="ghost" size="sm" className="flex-1 text-xs hover:bg-primary/10 hover:text-primary">
                                     <Edit2 className="h-3 w-3 mr-2" /> Modify
                                 </Button>
-                                <Button variant="ghost" size="sm" className="flex-1 text-xs hover:bg-destructive/10 hover:text-destructive">
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="flex-1 text-xs hover:bg-destructive/10 hover:text-destructive"
+                                    onClick={() => handleDelete(branch.id)}
+                                    disabled={deleteMutation.isPending}
+                                >
                                     <Trash2 className="h-3 w-3 mr-2" /> Deactivate
                                 </Button>
                             </div>
