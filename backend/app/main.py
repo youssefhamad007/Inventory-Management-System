@@ -23,18 +23,22 @@ app = FastAPI(
 )
 
 # CORS Configuration
+# Standard origins for Local and defined Prod
 origins = [
-    "http://localhost:5173", # Local development
-    "https://inventory-management-system-silk-seven.vercel.app", # Your actual frontend URL
+    "http://localhost:5173",
+    "https://inventory-management-system-silk-seven.vercel.app",
 ]
 
 app.add_middleware(
     CORSMiddleware,
+    # Allow all Vercel deployment subdomains dynamically
     allow_origin_regex=r"https://inventory-management-system-.*\.vercel\.app",
     allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    # Explicitly expose common headers for preflight success
+    expose_headers=["*"],
 )
 
 @app.get("/")
