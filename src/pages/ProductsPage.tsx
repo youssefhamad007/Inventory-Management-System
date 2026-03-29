@@ -151,10 +151,10 @@ export function ProductsPage() {
                 <div className="flex-1 min-h-0">
                     <DataTable
                         columns={columns}
-                        data={products?.filter(p =>
+                        data={(Array.isArray(products) ? products : []).filter(p =>
                             p.name?.toLowerCase().includes(globalFilter.toLowerCase()) ||
                             p.sku?.toLowerCase().includes(globalFilter.toLowerCase())
-                        ) ?? []}
+                        )}
                         pageCount={1}
                         pagination={pagination}
                         onPaginationChange={setPagination}

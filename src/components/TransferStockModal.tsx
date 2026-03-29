@@ -40,7 +40,7 @@ export function TransferStockModal({ isOpen, onClose }: TransferStockModalProps)
     });
 
     // Filter stock to show only items that actually exist in the source branch
-    const availableProducts = stock?.filter(s => s.branch_id === formData.from_branch_id) || [];
+    const availableProducts = (Array.isArray(stock) ? stock : []).filter(s => s.branch_id === formData.from_branch_id);
 
     const mutation = useMutation({
         mutationFn: transferStock,
