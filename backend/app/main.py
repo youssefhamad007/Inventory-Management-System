@@ -23,23 +23,31 @@ app = FastAPI(
 )
 
 # CORS Configuration
-# Standard origins for Local and defined Prod
-origins = [
-    "http://localhost:5173",
-    "https://inventory-management-system-silk-seven.vercel.app",
-]
-
 app.add_middleware(
     CORSMiddleware,
-    # Allow all Vercel deployment subdomains dynamically
-    allow_origin_regex=r"https://inventory-management-system-.*\.vercel\.app",
-    allow_origins=origins,
+    # Allow ANY Vercel subdomain and localhost
+    allow_origin_regex=r"https://.*\.vercel\.app|http://localhost:5173",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
-    # Explicitly expose common headers for preflight success
     expose_headers=["*"],
 )
+
+# Global Exception Handler to ensure CORS headers are sent on 500 errors
+from fastapi import Request
+from fastapi.responses import JSONResponse
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    logger.error(f"Global Error: {str(exc)}", exc_info=True)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal Server Error", "message": str(exc)},
+        headers={
+            "Access-Control-Allow-Origin": request.headers.get("Origin", "*"),
+            "Access-Control-Allow-Credentials": "true",
+        }
+    )
 
 @app.get("/")
 async def root():
