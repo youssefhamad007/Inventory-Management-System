@@ -10,5 +10,9 @@ class Settings(BaseSettings):
     SUPABASE_SERVICE_ROLE_KEY: str = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
     DATABASE_URL: str = os.getenv("DATABASE_URL", "")
 
+# Safety logging for deployment verification
+def mask_key(k: str): return f"{k[:4]}...{k[-4:]}" if len(k) > 10 else "EMPTY"
+print(f"Config loaded. URL: {os.getenv('SUPABASE_URL')}, ANON: {mask_key(os.getenv('SUPABASE_ANON_KEY', ''))}, SERVICE: {mask_key(os.getenv('SUPABASE_SERVICE_ROLE_KEY', ''))}")
+
 
 settings = Settings()
