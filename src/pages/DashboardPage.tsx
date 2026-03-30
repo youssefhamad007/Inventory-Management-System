@@ -39,7 +39,7 @@ export function DashboardPage() {
     const cards = [
         {
             title: 'Inventory Value',
-            value: `$${stats?.total_inventory_value.toLocaleString()}`,
+            value: `$${Number(stats?.total_inventory_value ?? 0).toLocaleString()}`,
             icon: DollarSign,
             color: 'text-blue-500',
             bg: 'bg-blue-500/10',
