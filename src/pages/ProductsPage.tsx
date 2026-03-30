@@ -84,7 +84,7 @@ export function ProductsPage() {
         {
             accessorKey: 'unit_price',
             header: 'Retail Price',
-            cell: ({ row }) => <span className="font-bold text-white text-lg">${row.original.unit_price.toFixed(2)}</span>,
+            cell: ({ row }) => <span className="font-bold text-white text-lg">${Number(row.original.unit_price ?? 0).toFixed(2)}</span>,
         },
         {
             accessorKey: 'is_active',

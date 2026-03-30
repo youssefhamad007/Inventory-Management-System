@@ -84,7 +84,7 @@ export function OrderCard({ order, onClick, isDragging, disabled }: OrderCardPro
             <div className="mt-auto pt-3 border-t border-white/5 flex items-center justify-between">
                 <div className="flex flex-col">
                     <span className="text-[9px] text-muted-foreground uppercase">Total Value</span>
-                    <span className="text-sm font-extrabold text-white">${order.total_amount.toLocaleString()}</span>
+                    <span className="text-sm font-extrabold text-white">${Number(order.total_amount ?? 0).toLocaleString()}</span>
                 </div>
                 <div className="h-7 w-7 rounded-lg bg-white/5 flex items-center justify-center text-muted-foreground group-hover:bg-primary group-hover:text-black transition-all">
                     <ExternalLink className="h-3.5 w-3.5" />

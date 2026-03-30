@@ -98,7 +98,7 @@ export function UsersPage() {
         if (!users) return [];
         return users.filter((u: any) =>
             u.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            u.role.toLowerCase().includes(searchQuery.toLowerCase())
+            u.role?.toLowerCase().includes(searchQuery.toLowerCase())
         );
     }, [users, searchQuery]);
 

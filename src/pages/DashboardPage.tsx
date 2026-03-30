@@ -57,7 +57,7 @@ export function DashboardPage() {
         },
         {
             title: 'Pending Orders',
-            value: stats?.order_summary.pending || 0,
+            value: stats?.order_summary?.pending ?? 0,
             icon: Clock,
             color: 'text-purple-500',
             bg: 'bg-purple-500/10',
@@ -66,7 +66,7 @@ export function DashboardPage() {
         },
         {
             title: 'Delivered (MTD)',
-            value: stats?.order_summary.delivered || 0,
+            value: stats?.order_summary?.delivered ?? 0,
             icon: CheckCircle2,
             color: 'text-emerald-500',
             bg: 'bg-emerald-500/10',
@@ -135,18 +135,18 @@ export function DashboardPage() {
                     </div>
 
                     <div className="space-y-4 flex-1 overflow-y-auto pr-2 custom-scrollbar">
-                        {stats?.recent_transactions.map((tx: any, idx: number) => (
+                        {(Array.isArray(stats?.recent_transactions) ? stats!.recent_transactions : []).map((tx: any, idx: number) => (
                             <div
                                 key={idx}
                                 className="flex items-start gap-4 p-3 rounded-xl hover:bg-white/5 transition-colors border border-transparent hover:border-white/5"
                             >
                                 <div className={cn(
                                     "mt-1 h-2 w-2 rounded-full shrink-0",
-                                    tx.txn_type.includes('in') ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" : "bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]"
+                                    tx.txn_type?.includes('in') ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" : "bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]"
                                 )} />
                                 <div className="space-y-1 min-w-0">
                                     <p className="text-sm font-medium text-white truncate">
-                                        {tx.txn_type.replace('_', ' ').toUpperCase()}
+                                        {tx.txn_type?.replace('_', ' ').toUpperCase()}
                                     </p>
                                     <p className="text-xs text-muted-foreground truncate">
                                         {tx.quantity_change > 0 ? '+' : ''}{tx.quantity_change} units
