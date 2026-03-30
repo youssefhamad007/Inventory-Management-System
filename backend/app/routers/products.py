@@ -30,7 +30,7 @@ async def create_product(
     product: ProductCreate,
     user=Depends(require_manager())
 ):
-    return ProductService.create_product(user["jwt"], product)
+    return ProductService.create_product(user["jwt"], product, user.get("branch_id"))
 
 @router.put("/{id}", response_model=dict)
 async def update_product(

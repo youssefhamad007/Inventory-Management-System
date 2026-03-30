@@ -36,10 +36,29 @@ class ProductService:
         return result.data[0]
 
     @staticmethod
-    def create_product(jwt: str, product: ProductCreate) -> dict:
+    def create_product(jwt: str, product: ProductCreate, branch_id: Optional[UUID] = None) -> dict:
         supabase = get_user_client(jwt)
+        # 1. Create the product
         result = supabase.table("products").insert(product.model_dump(mode="json")).execute()
-        return result.data[0]
+        if not result.data:
+            raise HTTPException(status_code=500, detail="Failed to create product")
+        
+        new_product = result.data[0]
+        
+        # 2. Initialize 0-quantity stock level at the specified branch (if any)
+        # This ensures it shows up in the Stock list immediately for the user.
+        if branch_id:
+            try:
+                supabase.table("stock_levels").insert({
+                    "product_id": new_product["id"],
+                    "branch_id": str(branch_id),
+                    "quantity": 0
+                }).execute()
+            except Exception as e:
+                # Silently fail stock initialization if it already exists or other non-critical error
+                print(f"Non-critical: Could not initialize stock for {new_product['id']} at {branch_id}: {str(e)}")
+        
+        return new_product
 
     @staticmethod
     def update_product(jwt: str, product_id: UUID, product: ProductUpdate) -> dict:

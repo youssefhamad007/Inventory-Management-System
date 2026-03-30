@@ -58,7 +58,6 @@ class OrderService:
             supabase.table("orders")
             .select("*, items:order_items(*, product:products(name, sku)), branch:branches(name), supplier:suppliers(name)")
             .eq("id", str(order_id))
-            .single()
             .execute()
         )
         if not result.data:
@@ -66,7 +65,7 @@ class OrderService:
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Order not found",
             )
-        return OrderService._map_order_record(result.data)
+        return OrderService._map_order_record(result.data[0])
 
     @staticmethod
     def create_order(jwt: str, order: OrderCreate, created_by: UUID) -> OrderResponse:
