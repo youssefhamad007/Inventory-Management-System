@@ -4,6 +4,7 @@ import {
     DialogContent,
     DialogHeader,
     DialogTitle,
+    DialogDescription,
     DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -32,7 +33,7 @@ export function InviteUserModal({ isOpen, onClose }: InviteUserModalProps) {
         e.preventDefault();
         setLoading(true);
         try {
-            await apiClient.post('/api/v1/users/create', formData);
+            await apiClient.post('users/create', formData);
             toast.success('Personnel Authorized', {
                 description: `${formData.full_name} has been added to the IMS database.`
             });
@@ -57,7 +58,7 @@ export function InviteUserModal({ isOpen, onClose }: InviteUserModalProps) {
                         </div>
                         <DialogTitle className="text-xl font-bold tracking-tight">Authorize Personnel</DialogTitle>
                     </div>
-                    <p className="text-sm text-muted-foreground">Provision new credentials for the operational matrix.</p>
+                    <DialogDescription className="text-sm text-muted-foreground">Provision new credentials for the operational matrix.</DialogDescription>
                 </DialogHeader>
 
                 <form onSubmit={handleSubmit} className="space-y-6 pt-4">

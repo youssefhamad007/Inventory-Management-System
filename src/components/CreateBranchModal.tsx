@@ -4,6 +4,7 @@ import {
     DialogContent,
     DialogHeader,
     DialogTitle,
+    DialogDescription,
     DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -59,7 +60,7 @@ export function CreateBranchModal({ isOpen, onClose }: CreateBranchModalProps) {
                         </div>
                         <DialogTitle className="text-xl font-bold tracking-tight">Expand Network</DialogTitle>
                     </div>
-                    <p className="text-sm text-muted-foreground">Initialize new regional operational center.</p>
+                    <DialogDescription className="text-sm text-muted-foreground">Initialize new regional operational center.</DialogDescription>
                 </DialogHeader>
 
                 <form onSubmit={handleSubmit} className="space-y-6 pt-4">

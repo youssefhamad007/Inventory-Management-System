@@ -4,6 +4,7 @@ import {
     DialogContent,
     DialogHeader,
     DialogTitle,
+    DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -86,6 +87,7 @@ export function CreateOrderModal({ isOpen, onClose }: CreateOrderModalProps) {
                         </div>
                         <DialogTitle className="text-xl font-bold tracking-tight">Initiate Logistic Manifest</DialogTitle>
                     </div>
+                    <DialogDescription className="sr-only">Create a new order by selecting products and specifying quantities.</DialogDescription>
                 </DialogHeader>
 
                 <form onSubmit={handleSubmit} className="space-y-6 pt-4">
