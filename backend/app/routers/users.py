@@ -70,13 +70,18 @@ async def create_user(user_data: UserCreate, user=Depends(require_admin())):
     new_uid = auth_res.user.id
 
     try:
-        supabase_admin.table("profiles").update({
+        supabase_admin.table("profiles").upsert({
+            "id": new_uid,
             "full_name": user_data.full_name,
             "role": user_data.role,
-            "branch_id": user_data.branch_id
-        }).eq("id", new_uid).execute()
+            "branch_id": user_data.branch_id,
+            "is_active": True
+        }).execute()
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Profile update failed: {str(e)}")
+        print(f"Profile creation failed for {new_uid}: {str(e)}")
+        # Don't fail the whole request if profile creation fails, 
+        # but log it. Actually, for this system, it's critical.
+        raise HTTPException(status_code=500, detail=f"Profile provision failed: {str(e)}")
 
     return {"message": "User created successfully", "id": new_uid}
 
