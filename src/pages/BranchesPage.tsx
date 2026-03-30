@@ -25,13 +25,13 @@ export function BranchesPage() {
         mutationFn: (id: string) => deleteBranch(id),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['branches'] });
-            toast.success('Branch deactivated');
+            toast.success('Branch removed');
         },
-        onError: () => toast.error('Failed to deactivate branch')
+        onError: () => toast.error('Failed to remove branch')
     });
 
     const handleDelete = (id: string) => {
-        if (confirm('Are you sure you want to deactivate this branch?')) {
+        if (confirm('Are you sure you want to PERMANENTLY delete this branch?')) {
             deleteMutation.mutate(id);
         }
     };
@@ -56,7 +56,7 @@ export function BranchesPage() {
             </div>
 
             <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-                {(branches ?? []).map((branch: any) => (
+                {(branches ?? []).filter((b: any) => b.is_active).map((branch: any) => (
                     <div
                         key={branch.id}
                         className="group relative overflow-hidden rounded-2xl border border-white/5 bg-black/40 p-6 shadow-2xl transition-all hover:border-primary/40 hover:bg-black/60"
@@ -104,7 +104,7 @@ export function BranchesPage() {
                                     onClick={() => handleDelete(branch.id)}
                                     disabled={deleteMutation.isPending}
                                 >
-                                    <Trash2 className="h-3 w-3 mr-2" /> Deactivate
+                                    <Trash2 className="h-3 w-3 mr-2" /> Delete
                                 </Button>
                             </div>
                         )}

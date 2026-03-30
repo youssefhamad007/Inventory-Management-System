@@ -84,54 +84,54 @@ export function OrdersPage() {
         })
     );
 
+    const findContainer = (id: string) => {
+        if (COLUMNS.find(c => c.id === id)) return id as OrderStatus;
+        const order = localOrders.find(o => o.id === id);
+        return order ? order.status : null;
+    };
+
     const handleDragStart = (event: DragStartEvent) => {
         setActiveId(event.active.id as string);
     };
 
     const handleDragOver = (event: DragOverEvent) => {
         const { active, over } = event;
-        if (!over) return;
+        const overId = over?.id;
 
-        const activeOrder = localOrders.find(o => o.id === active.id);
-        const overId = over.id as string;
+        if (!overId || active.id === overId) return;
 
-        // If dragging over a column or an item in a different column
-        let overColumnId: OrderStatus | undefined;
-        if (COLUMNS.find(c => c.id === overId)) {
-            overColumnId = overId as OrderStatus;
-        } else {
-            const overOrder = localOrders.find(o => o.id === overId);
-            if (overOrder) overColumnId = overOrder.status;
+        const activeContainer = findContainer(active.id as string);
+        const overContainer = findContainer(overId as string);
+
+        if (!activeContainer || !overContainer || activeContainer === overContainer) {
+            return;
         }
 
-        if (activeOrder && overColumnId && activeOrder.status !== overColumnId) {
-            setLocalOrders(prev => prev.map(o =>
-                o.id === active.id ? { ...o, status: overColumnId! } : o
-            ));
-        }
+        setLocalOrders((prev) => {
+            return prev.map(o =>
+                o.id === active.id ? { ...o, status: overContainer } : o
+            );
+        });
     };
 
     const handleDragEnd = (event: DragEndEvent) => {
         const { active, over } = event;
-        setActiveId(null);
+        const overId = over?.id;
 
-        if (!over) return;
-
-        const activeOrder = localOrders.find(o => o.id === active.id);
-        const overId = over.id as string;
-
-        let overColumnId: OrderStatus | undefined;
-        if (COLUMNS.find(c => c.id === overId)) {
-            overColumnId = overId as OrderStatus;
-        } else {
-            const overOrder = localOrders.find(o => o.id === overId);
-            if (overOrder) overColumnId = overOrder.status;
+        if (!overId) {
+            setActiveId(null);
+            return;
         }
 
-        if (activeOrder && overColumnId) {
+        const activeContainer = findContainer(active.id as string);
+        const overContainer = findContainer(overId as string);
+
+        if (activeContainer && overContainer) {
             // Trigger actual API update
-            mutation.mutate({ id: activeOrder.id, status: overColumnId });
+            mutation.mutate({ id: active.id as string, status: overContainer });
         }
+
+        setActiveId(null);
     };
 
     const activeOrder = activeId ? localOrders.find(o => o.id === activeId) : null;

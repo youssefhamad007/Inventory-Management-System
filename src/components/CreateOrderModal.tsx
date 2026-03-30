@@ -137,7 +137,7 @@ export function CreateOrderModal({ isOpen, onClose }: CreateOrderModalProps) {
                                                 <SelectValue placeholder="Select Resource" />
                                             </SelectTrigger>
                                             <SelectContent className="bg-black/95 border-white/10">
-                                                {products?.map((p) => (
+                                                {products?.filter((p) => p.is_active).map((p) => (
                                                     <SelectItem key={p.id} value={p.id}>{p.name} ({p.sku})</SelectItem>
                                                 ))}
                                             </SelectContent>

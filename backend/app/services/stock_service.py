@@ -6,6 +6,7 @@ from app.models.stock import StockAdjustmentRequest, StockTransferRequest, Trans
 
 class StockService:
     @staticmethod
+    @staticmethod
     def list_stock_levels(
         jwt: str,
         branch_id: Optional[UUID] = None,
@@ -13,49 +14,18 @@ class StockService:
     ) -> List[dict]:
         supabase = get_user_client(jwt)
         
-        # 1. Fetch physical stock levels
-        stock_query = supabase.table("stock_levels").select(
-            "*, product:products!product_id(name, sku, min_stock_level), branch:branches!branch_id(name)"
-        )
+        # Query physical stock levels
+        query = supabase.table("stock_levels").select(
+            "*, product:products!product_id(name, sku, min_stock_level, is_active), branch:branches!branch_id(name)"
+        ).eq("product.is_active", True)
+        
         if branch_id:
-            stock_query = stock_query.eq("branch_id", str(branch_id))
+            query = query.eq("branch_id", str(branch_id))
         if product_id:
-            stock_query = stock_query.eq("product_id", str(product_id))
+            query = query.eq("product_id", str(product_id))
             
-        stock_result = stock_query.execute()
-        physical_stock = stock_result.data or []
-        
-        # 2. If filtering by a specific branch or product, we might want to see "Zero Stock" items too.
-        # But for now, let's at least ensure all products are visible if product_id is specified,
-        # or if we are looking at the general list, ensure products with NO entries appear at least once.
-        
-        # Optimization: Only do the "Merge" if we are looking for a specific product or the general list
-        # to avoid performance issues with huge catalogs.
-        all_products_query = supabase.table("products").select("id, name, sku, min_stock_level").eq("is_active", True)
-        if product_id:
-            all_products_query = all_products_query.eq("id", str(product_id))
-        
-        products_result = all_products_query.limit(200).execute() # Limit to prevent explosion
-        all_products = products_result.data or []
-        
-        # Create a set of product IDs that already have stock entries
-        product_ids_with_stock = {s["product_id"] for s in physical_stock}
-        
-        # For products with NO stock entries anywhere, add a "virtual" 0-stock entry
-        virtual_stock = []
-        for p in all_products:
-            if p["id"] not in product_ids_with_stock:
-                # If we're filtering by branch, but the product isn't there, show it at that branch with 0
-                virtual_stock.append({
-                    "id": f"virtual-{p['id']}",
-                    "product_id": p["id"],
-                    "branch_id": str(branch_id) if branch_id else None,
-                    "quantity": 0,
-                    "product": p,
-                    "branch": {"name": "Pending Initialization"} if not branch_id else {"name": "Not in this Branch"}
-                })
-                
-        return physical_stock + virtual_stock
+        result = query.execute()
+        return result.data or []
 
     @staticmethod
     def adjust_stock(jwt: str, adj: StockAdjustmentRequest, performed_by: UUID) -> dict:

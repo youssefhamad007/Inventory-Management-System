@@ -45,28 +45,21 @@ class ProductService:
         
         new_product = result.data[0]
         
-        # 2. Initialize 0-quantity stock level at a branch
-        # This ensures it shows up in the Stock list immediately.
-        effective_branch_id = branch_id
-        
-        # If the user has no branch (like a global admin), pick the first available branch
-        if not effective_branch_id:
-            try:
-                branches_res = supabase.table("branches").select("id").limit(1).execute()
-                if branches_res.data:
-                    effective_branch_id = branches_res.data[0]["id"]
-            except:
-                pass
-
-        if effective_branch_id:
-            try:
-                supabase.table("stock_levels").insert({
-                    "product_id": new_product["id"],
-                    "branch_id": str(effective_branch_id),
-                    "quantity": 0
-                }).execute()
-            except Exception as e:
-                print(f"Non-critical: Could not initialize stock for {new_product['id']}: {str(e)}")
+        # 2. Initialize 0-quantity stock levels at ALL branches
+        # This ensures the product is immediately manageable at every location.
+        try:
+            admin_supabase = get_admin_client()
+            # Fetch all active branches
+            branches_res = admin_supabase.table("branches").select("id").eq("is_active", True).execute()
+            if branches_res.data:
+                init_data = [
+                    {"product_id": new_product["id"], "branch_id": b["id"], "quantity": 0}
+                    for b in branches_res.data
+                ]
+                admin_supabase.table("stock_levels").insert(init_data).execute()
+                print(f"Initialized stock for {new_product['id']} at {len(init_data)} branches")
+        except Exception as e:
+            print(f"Non-critical: Could not initialize all stock levels for {new_product['id']}: {str(e)}")
         
         return new_product
 
@@ -84,21 +77,30 @@ class ProductService:
     @staticmethod
     def delete_product(jwt: str, product_id: UUID) -> bool:
         supabase = get_user_client(jwt)
+        p_id_str = str(product_id)
+        
+        print(f"Attempting to delete product: {p_id_str}")
         
         # 1. Try to delete associated stock levels first
         try:
-            supabase.table("stock_levels").delete().eq("product_id", str(product_id)).execute()
-        except:
-            pass # Continue to try deleting product
+            supabase.table("stock_levels").delete().eq("product_id", p_id_str).execute()
+        except Exception as e:
+            print(f"Warning: Stock level deletion failed for {p_id_str}: {str(e)}")
             
         # 2. Try hard delete on the product
         try:
-            result = supabase.table("products").delete().eq("id", str(product_id)).execute()
-            if result.data:
+            result = supabase.table("products").delete().eq("id", p_id_str).execute()
+            if result.data and len(result.data) > 0:
+                print(f"Product hard-deleted: {p_id_str}")
                 return True
-        except:
-            pass # Dependency error (e.g. product is in an order)
+        except Exception as e:
+            print(f"Product hard-delete failed (likely dependencies) for {p_id_str}: {str(e)}")
 
         # 3. Fallback: Soft delete if hard delete is impossible (safeguard history)
-        result = supabase.table("products").update({"is_active": False}).eq("id", str(product_id)).execute()
-        return len(result.data) > 0
+        try:
+            print(f"Falling back to soft-delete for product: {p_id_str}")
+            result = supabase.table("products").update({"is_active": False}).eq("id", p_id_str).execute()
+            return len(result.data) > 0 if result.data else False
+        except Exception as e:
+            print(f"Soft-delete also failed for {p_id_str}: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"Total deletion failure: {str(e)}")
