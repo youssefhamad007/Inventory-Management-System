@@ -45,18 +45,28 @@ class ProductService:
         
         new_product = result.data[0]
         
-        # 2. Initialize 0-quantity stock level at the specified branch (if any)
-        # This ensures it shows up in the Stock list immediately for the user.
-        if branch_id:
+        # 2. Initialize 0-quantity stock level at a branch
+        # This ensures it shows up in the Stock list immediately.
+        effective_branch_id = branch_id
+        
+        # If the user has no branch (like a global admin), pick the first available branch
+        if not effective_branch_id:
+            try:
+                branches_res = supabase.table("branches").select("id").limit(1).execute()
+                if branches_res.data:
+                    effective_branch_id = branches_res.data[0]["id"]
+            except:
+                pass
+
+        if effective_branch_id:
             try:
                 supabase.table("stock_levels").insert({
                     "product_id": new_product["id"],
-                    "branch_id": str(branch_id),
+                    "branch_id": str(effective_branch_id),
                     "quantity": 0
                 }).execute()
             except Exception as e:
-                # Silently fail stock initialization if it already exists or other non-critical error
-                print(f"Non-critical: Could not initialize stock for {new_product['id']} at {branch_id}: {str(e)}")
+                print(f"Non-critical: Could not initialize stock for {new_product['id']}: {str(e)}")
         
         return new_product
 
@@ -74,6 +84,21 @@ class ProductService:
     @staticmethod
     def delete_product(jwt: str, product_id: UUID) -> bool:
         supabase = get_user_client(jwt)
-        # Soft delete by setting is_active to False
+        
+        # 1. Try to delete associated stock levels first
+        try:
+            supabase.table("stock_levels").delete().eq("product_id", str(product_id)).execute()
+        except:
+            pass # Continue to try deleting product
+            
+        # 2. Try hard delete on the product
+        try:
+            result = supabase.table("products").delete().eq("id", str(product_id)).execute()
+            if result.data:
+                return True
+        except:
+            pass # Dependency error (e.g. product is in an order)
+
+        # 3. Fallback: Soft delete if hard delete is impossible (safeguard history)
         result = supabase.table("products").update({"is_active": False}).eq("id", str(product_id)).execute()
         return len(result.data) > 0

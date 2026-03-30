@@ -78,7 +78,7 @@ export function StockPage() {
                             size="sm"
                             className="h-8 px-2 hover:bg-destructive/10 hover:text-destructive shrink-0"
                             onClick={() => handleQuickAdjust(row.original, -10)}
-                            disabled={isPending || row.original.quantity < 10}
+                            disabled={isPending || !row.original.branch_id || row.original.quantity < 10}
                         >
                             -10
                         </Button>
@@ -87,7 +87,7 @@ export function StockPage() {
                             size="sm"
                             className="h-8 px-2 hover:bg-destructive/10 hover:text-destructive shrink-0"
                             onClick={() => handleQuickAdjust(row.original, -1)}
-                            disabled={isPending || row.original.quantity < 1}
+                            disabled={isPending || !row.original.branch_id || row.original.quantity < 1}
                         >
                             -1
                         </Button>
@@ -99,7 +99,7 @@ export function StockPage() {
                             size="sm"
                             className="h-8 px-2 hover:bg-emerald-500/10 hover:text-emerald-500 shrink-0"
                             onClick={() => handleQuickAdjust(row.original, 1)}
-                            disabled={isPending}
+                            disabled={isPending || !row.original.branch_id}
                         >
                             +1
                         </Button>
@@ -108,7 +108,7 @@ export function StockPage() {
                             size="sm"
                             className="h-8 px-2 hover:bg-emerald-500/10 hover:text-emerald-500 shrink-0"
                             onClick={() => handleQuickAdjust(row.original, 10)}
-                            disabled={isPending}
+                            disabled={isPending || !row.original.branch_id}
                         >
                             +10
                         </Button>

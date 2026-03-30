@@ -31,7 +31,7 @@ class StockService:
         
         # Optimization: Only do the "Merge" if we are looking for a specific product or the general list
         # to avoid performance issues with huge catalogs.
-        all_products_query = supabase.table("products").select("id, name, sku, min_stock_level")
+        all_products_query = supabase.table("products").select("id, name, sku, min_stock_level").eq("is_active", True)
         if product_id:
             all_products_query = all_products_query.eq("id", str(product_id))
         

@@ -152,8 +152,10 @@ export function ProductsPage() {
                     <DataTable
                         columns={columns}
                         data={(Array.isArray(products) ? products : []).filter(p =>
-                            p.name?.toLowerCase().includes(globalFilter.toLowerCase()) ||
-                            p.sku?.toLowerCase().includes(globalFilter.toLowerCase())
+                            p.is_active && (
+                                p.name?.toLowerCase().includes(globalFilter.toLowerCase()) ||
+                                p.sku?.toLowerCase().includes(globalFilter.toLowerCase())
+                            )
                         )}
                         pageCount={1}
                         pagination={pagination}
