@@ -30,10 +30,10 @@ class ProductService:
     @staticmethod
     def get_product(jwt: str, product_id: UUID) -> dict:
         supabase = get_user_client(jwt)
-        result = supabase.table("products").select("*, category:categories!category_id(name), supplier:suppliers!supplier_id(name)").eq("id", str(product_id)).single().execute()
+        result = supabase.table("products").select("*, category:categories!category_id(name), supplier:suppliers!supplier_id(name)").eq("id", str(product_id)).execute()
         if not result.data:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
-        return result.data
+        return result.data[0]
 
     @staticmethod
     def create_product(jwt: str, product: ProductCreate) -> dict:

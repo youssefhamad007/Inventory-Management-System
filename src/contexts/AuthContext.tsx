@@ -22,7 +22,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   // Fetch profile strictly from the backend API
-  const fetchProfile = useCallback(async (userId: string, jwt: string) => {
+  const fetchProfile = useCallback(async (jwt: string) => {
     try {
       const res = await apiClient.get('users/me', {
         headers: { Authorization: `Bearer ${jwt}` }
@@ -43,7 +43,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(s?.user ?? null);
       if (s?.user) {
         localStorage.setItem('supabase-auth-token', s.access_token);
-        fetchProfile(s.user.id, s.access_token);
+        fetchProfile(s.access_token);
       }
       setLoading(false);
     });
@@ -55,7 +55,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(s?.user ?? null);
         if (s?.access_token) {
           localStorage.setItem('supabase-auth-token', s.access_token);
-          if (s.user) fetchProfile(s.user.id, s.access_token);
+          fetchProfile(s.access_token);
         } else {
           localStorage.removeItem('supabase-auth-token');
           setProfile(null);

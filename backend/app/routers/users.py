@@ -30,8 +30,15 @@ async def list_users(user=Depends(require_admin())):
 @router.get("/me")
 async def get_my_profile(user=Depends(get_current_user)):
     supabase = get_admin_client()
-    result = supabase.table("profiles").select("*, branches(name)").eq("id", user["id"]).single().execute()
-    return result.data
+    try:
+        # User jwt-based client would be better but get_admin_client avoids RLS issues for profile discovery
+        result = supabase.table("profiles").select("*, branches(name)").eq("id", str(user["id"])).execute()
+        if not result.data:
+             raise HTTPException(status_code=404, detail="Profile not found in database")
+        return result.data[0]
+    except Exception as e:
+        if isinstance(e, HTTPException): raise
+        raise HTTPException(status_code=500, detail=f"User service error: {str(e)}")
 
 
 @router.put("/{id}/role")

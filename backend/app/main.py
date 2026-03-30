@@ -39,9 +39,10 @@ app.add_middleware(
 # Global Exception Handler — validates origin and hides internal details
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
-    logger.error(f"Global Error: {type(exc).__name__}", exc_info=True)
+    error_msg = f"{type(exc).__name__}: {str(exc)}"
+    logger.error(f"Global Error: {error_msg}", exc_info=True)
 
-    origin = request.headers.get("Origin", "")
+    origin = request.headers.get("Origin") or ""
     headers = {}
     if origin and ALLOWED_ORIGIN_REGEX.fullmatch(origin):
         headers["Access-Control-Allow-Origin"] = origin
@@ -49,7 +50,7 @@ async def global_exception_handler(request: Request, exc: Exception):
 
     return JSONResponse(
         status_code=500,
-        content={"detail": "Internal Server Error"},
+        content={"detail": "Internal Server Error", "debug_info": error_msg},
         headers=headers
     )
 

@@ -15,7 +15,7 @@ class OrderSummary(BaseModel):
 
 
 class DashboardSummary(BaseModel):
-    total_inventory_value: Decimal
+    total_inventory_value: float
     low_stock_alerts: list
     order_summary: OrderSummary
     recent_transactions: list

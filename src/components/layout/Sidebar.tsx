@@ -17,7 +17,7 @@ export function Sidebar() {
     ];
 
     const filteredItems = navItems.filter(item =>
-        !profile || item.roles.includes(profile.role)
+        !profile || !profile.role || item.roles.includes(profile.role)
     );
 
     return (

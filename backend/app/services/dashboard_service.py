@@ -15,9 +15,9 @@ class DashboardService:
         # Total inventory value: manual aggregation since RPC doesn't exist
         stock_result = supabase.table("stock_levels").select("quantity, product_id, product:products!product_id(unit_price)").execute()
         total_value = sum(
-            (Decimal(str(item.get("quantity", 0))) * Decimal(str((item.get("product") or {}).get("unit_price", 0)))
+            (float(str(item.get("quantity", 0))) * float(str((item.get("product") or {}).get("unit_price", 0)))
             for item in (stock_result.data or [])),
-            Decimal("0")
+            0.0
         )
 
         low_stock_result = (
@@ -73,7 +73,7 @@ class DashboardService:
         # Current Value
         stock_result = supabase.table("stock_levels").select("quantity, product_id, product:products!product_id(unit_price)").execute()
         current_value = sum(
-            (item.get("quantity", 0)) * float((item.get("product") or {}).get("unit_price", 0))
+            float(str(item.get("quantity", 0))) * float(str((item.get("product") or {}).get("unit_price", 0)))
             for item in (stock_result.data or [])
         )
         
@@ -109,7 +109,8 @@ class DashboardService:
             # Daily valuation delta for area chart
             dt = datetime.fromisoformat(txn["created_at"].replace("Z", "+00:00")).date()
             day_str = dt.strftime("%Y-%m-%d")
-            price = float(product.get("unit_price", 0))
+            price = float((product or {}).get("unit_price", 0))
+            change = float(txn.get("quantity_change", 0))
             val_change = change * price
             
             deltas_by_day[day_str] = deltas_by_day.get(day_str, 0) + val_change
