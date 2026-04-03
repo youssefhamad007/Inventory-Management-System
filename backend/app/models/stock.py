@@ -2,7 +2,9 @@ from typing import Optional, List
 from pydantic import BaseModel, ConfigDict
 from uuid import UUID
 from datetime import datetime
+from decimal import Decimal
 from enum import Enum
+
 
 class TransactionType(str, Enum):
     PURCHASE_IN = "purchase_in"
@@ -31,6 +33,9 @@ class StockAdjustmentRequest(BaseModel):
     quantity_change: int
     txn_type: TransactionType
     notes: Optional[str] = None
+    # Optional: provided by the caller to enable financial threshold checks (BE-TASK-03).
+    # Not persisted to the DB RPC — used only in the router layer.
+    unit_cost: Optional[Decimal] = None
 
 class StockTransferRequest(BaseModel):
     product_id: UUID

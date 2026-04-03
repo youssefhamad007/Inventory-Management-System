@@ -14,6 +14,8 @@ class OrderStatus(str, Enum):
     CONFIRMED = "confirmed"
     SHIPPED = "shipped"
     DELIVERED = "delivered"
+    PARTIALLY_DELIVERED = "partially_delivered"
+    RETURNED = "returned"
     CANCELLED = "cancelled"
 
 class OrderItemBase(BaseModel):
@@ -43,6 +45,17 @@ class OrderCreate(OrderBase):
 class OrderUpdate(BaseModel):
     status: Optional[OrderStatus] = None
     notes: Optional[str] = None
+
+
+class ReceivedItem(BaseModel):
+    """A single line item in a receive-shipment payload."""
+    product_id: UUID
+    received_quantity: int
+
+
+class ReceiveShipmentRequest(BaseModel):
+    """Payload for POST /orders/{id}/receive — partial or full fulfillment."""
+    items: List[ReceivedItem]
 
 class OrderResponse(OrderBase):
     id: UUID

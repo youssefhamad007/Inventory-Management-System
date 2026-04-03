@@ -10,6 +10,7 @@ from app.models.order import (
     OrderResponse,
     OrderType,
     OrderStatus,
+    ReceiveShipmentRequest,
 )
 from app.auth.permissions import require_role, require_staff, require_manager
 from app.auth.schemas import UserContext
@@ -72,10 +73,11 @@ async def create_order(
     summary="Update order status",
     description=(
         "Update the status of an order (e.g., draft → confirmed → shipped → delivered).\n\n"
+        "When an order is marked as **confirmed**, allocated_quantity is incremented for purchase orders.\n"
         "When an order is marked as **delivered**, stock levels are automatically adjusted "
-        "for each line item using the StockService:\n"
-        "- Purchase orders increase stock (inbound)\n"
-        "- Sales orders decrease stock (outbound)\n\n"
+        "for each line item:\n"
+        "- Purchase orders: release allocation and increase physical stock (inbound)\n"
+        "- Sales orders: decrease physical stock (outbound)\n\n"
         "- **Roles**: Admin and Manager"
     ),
 )
@@ -87,3 +89,24 @@ async def update_order_status(
     if not status_update.status:
         raise HTTPException(status_code=400, detail="Status is required")
     return OrderService.update_order_status(user["jwt"], id, status_update.status, user["id"])
+
+
+@router.post(
+    "/{id}/receive",
+    response_model=OrderResponse,
+    summary="Receive shipment (full or partial)",
+    description=(
+        "Record the physical receipt of goods for a purchase order.\n\n"
+        "Accepts actual quantities received per SKU. If any item is short-shipped, "
+        "the order transitions to **partially_delivered** automatically. "
+        "If all items are fully received, the order moves to **delivered**.\n\n"
+        "Stock `quantity` (physical) is incremented and `allocated_quantity` is released accordingly.\n\n"
+        "- **Roles**: Admin and Manager"
+    ),
+)
+async def receive_shipment(
+    id: UUID,
+    payload: ReceiveShipmentRequest,
+    user: UserContext = Depends(require_manager()),
+) -> OrderResponse:
+    return OrderService.receive_shipment(user["jwt"], id, payload, user["id"])

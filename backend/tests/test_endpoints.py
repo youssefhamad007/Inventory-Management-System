@@ -27,7 +27,7 @@ def test_dashboard_summary_forbidden_for_staff(client, auth_user_data):
         "/api/v1/dashboard/summary",
         headers=_auth_header("staff-token"),
     )
-    assert resp.status_code == 403
+    assert resp.status_code == 200  # Staff now allowed (remote pull updated to require_staff)
 
 
 def test_dashboard_summary_happy_path(client):

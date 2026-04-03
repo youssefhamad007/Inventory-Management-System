@@ -12,6 +12,7 @@ from app.routers.orders import router as orders_router
 from app.routers.branches import router as branches_router
 from app.routers.users import router as users_router
 from app.routers.notifications import router as notifications_router
+from app.routers.approvals import router as approvals_router
 
 # 2. Setup Logging for Vercel visibility
 logging.basicConfig(level=logging.INFO)
@@ -71,5 +72,6 @@ app.include_router(orders_router, prefix="/api/v1/orders", tags=["Orders"])
 app.include_router(branches_router, prefix="/api/v1/branches", tags=["Branches"])
 app.include_router(users_router, prefix="/api/v1/users", tags=["Users"])
 app.include_router(notifications_router, prefix="/api/v1/notifications", tags=["Notifications"])
+app.include_router(approvals_router, prefix="/api/v1/approvals", tags=["Approvals"])
 
 logger.info("IMS API: All routers mounted successfully.")

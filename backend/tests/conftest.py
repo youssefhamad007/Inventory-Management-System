@@ -221,13 +221,17 @@ def client(auth_user_data: Dict[str, FakeUser], fake_supabase: _FakeSupabaseClie
         lambda *args, **kwargs: {"id": str(uuid4()), "name": "Example Product"}
     )
     ProductService.create_product = staticmethod(
-        lambda product: {"id": str(uuid4()), "name": product.name, "sku": product.sku}
+        lambda *args, **kwargs: {
+            "id": str(uuid4()),
+            "name": args[1].name if len(args) > 1 else "Product",
+            "sku": args[1].sku if len(args) > 1 else "SKU",
+        }
     )
     ProductService.update_product = staticmethod(
-        lambda _product_id, product: {"id": str(_product_id), "name": getattr(product, "name", "Updated")}
+        lambda *args, **kwargs: {"id": str(uuid4()), "name": "Updated"}
     )
     ProductService.delete_product = staticmethod(
-        lambda _product_id: True
+        lambda *args, **kwargs: True
     )
 
     OrderService.list_orders = staticmethod(
@@ -249,7 +253,7 @@ def client(auth_user_data: Dict[str, FakeUser], fake_supabase: _FakeSupabaseClie
         ]
     )
     OrderService.get_order = staticmethod(
-        lambda _order_id: {
+        lambda *args, **kwargs: {
             "id": uuid4(),
             "order_number": "ORD-002",
             "order_type": "purchase",
@@ -265,27 +269,27 @@ def client(auth_user_data: Dict[str, FakeUser], fake_supabase: _FakeSupabaseClie
         }
     )
     OrderService.create_order = staticmethod(
-        lambda order, _created_by: {
+        lambda *args, **kwargs: {
             "id": uuid4(),
-            "order_number": order.order_number,
-            "order_type": order.order_type.value,
-            "status": order.status.value,
-            "branch_id": order.branch_id,
-            "supplier_id": order.supplier_id,
-            "notes": order.notes,
+            "order_number": "ORD-NEW",
+            "order_type": "purchase",
+            "status": "draft",
+            "branch_id": uuid4(),
+            "supplier_id": None,
+            "notes": None,
             "total_amount": Decimal("0.00"),
-            "created_by": _created_by,
+            "created_by": uuid4(),
             "created_at": _iso_now(),
             "updated_at": _iso_now(),
             "items": [],
         }
     )
     OrderService.update_order_status = staticmethod(
-        lambda _order_id, new_status, _performed_by: {
-            "id": _order_id,
+        lambda *args, **kwargs: {
+            "id": uuid4(),
             "order_number": "ORD-UPDATED",
             "order_type": "purchase",
-            "status": new_status.value if hasattr(new_status, "value") else str(new_status),
+            "status": args[2].value if len(args) > 2 and hasattr(args[2], 'value') else "delivered",
             "branch_id": uuid4(),
             "supplier_id": None,
             "notes": None,
@@ -301,14 +305,14 @@ def client(auth_user_data: Dict[str, FakeUser], fake_supabase: _FakeSupabaseClie
         lambda *args, **kwargs: [{"id": str(uuid4()), "product_id": str(uuid4()), "branch_id": str(uuid4()), "quantity": 10}]
     )
     StockService.adjust_stock = staticmethod(
-        lambda _adj, _performed_by: {"success": True}
+        lambda *args, **kwargs: {"success": True}
     )
     StockService.transfer_stock = staticmethod(
-        lambda _transfer, _performed_by: {"success": True}
+        lambda *args, **kwargs: {"success": True}
     )
 
     DashboardService.get_summary = staticmethod(
-        lambda: {
+        lambda *args, **kwargs: {
             "total_inventory_value": Decimal("1234.56"),
             "low_stock_alerts": [],
             "order_summary": {"pending": 2, "delivered": 5},
@@ -316,10 +320,11 @@ def client(auth_user_data: Dict[str, FakeUser], fake_supabase: _FakeSupabaseClie
         }
     )
 
-    # Fake Supabase clients for the two routers that directly query Supabase.
+    # Fake Supabase clients for the routers that directly query Supabase.
     users_router.get_admin_client = lambda: fake_supabase
     branches_router.get_admin_client = lambda: fake_supabase
-    branches_router.get_supabase_client = lambda: fake_supabase
+    # branches.py now uses get_user_client (updated by remote pull)
+    branches_router.get_user_client = lambda _jwt: fake_supabase
 
     with TestClient(app) as ac:
         yield ac

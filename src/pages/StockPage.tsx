@@ -40,12 +40,12 @@ export function StockPage() {
         {
             accessorKey: 'product.sku',
             header: 'SKU',
-            cell: ({ row }) => <span className="font-mono text-xs">{row.original.product?.sku}</span>
+            cell: ({ row }) => <span className="font-mono text-xs">{(row.original as any).products?.sku || row.original.product?.sku}</span>
         },
         {
             accessorKey: 'product.name',
             header: 'Product Name',
-            cell: ({ row }) => <span className="font-medium">{row.original.product?.name}</span>
+            cell: ({ row }) => <span className="font-medium">{(row.original as any).products?.name || row.original.product?.name}</span>
         },
         {
             accessorKey: 'branch.name',
@@ -56,7 +56,7 @@ export function StockPage() {
             accessorKey: 'quantity',
             header: 'Current Quantity',
             cell: ({ row }) => {
-                const isLowStock = row.original.quantity <= (row.original.product?.min_stock_level || 0);
+                const isLowStock = row.original.quantity <= ((row.original as any).products?.min_stock_level || row.original.product?.min_stock_level || 0);
                 return (
                     <span className={cn(
                         "font-bold text-lg px-2.5 py-1 rounded-md",
