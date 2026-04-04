@@ -1,5 +1,5 @@
 from typing import Optional, List
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, computed_field
 from uuid import UUID
 from datetime import datetime
 from decimal import Decimal
@@ -19,11 +19,18 @@ class StockLevelResponse(BaseModel):
     product_id: UUID
     branch_id: UUID
     quantity: int
+    allocated_quantity: int = 0
     updated_at: datetime
     
     # Nested info if needed
     product_name: Optional[str] = None
     branch_name: Optional[str] = None
+
+    @computed_field
+    @property
+    def available_quantity(self) -> int:
+        """Physical stock minus reserved allocations = what can actually be sold/moved."""
+        return self.quantity - self.allocated_quantity
 
     model_config = ConfigDict(from_attributes=True)
 

@@ -51,3 +51,6 @@ wheels/
 venv/
 ENV/
 CLAUDE.md
+.claude
+SRS.pdf
+User Stories.pdf

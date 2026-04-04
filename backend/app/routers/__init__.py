@@ -1,1 +1,1 @@
-from . import products, stock, orders, branches, users, dashboard, notifications
+from . import products, stock, orders, branches, users, dashboard, notifications, approvals
