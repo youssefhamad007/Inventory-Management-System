@@ -4,10 +4,19 @@ import { Building2, Plus, MapPin, Phone, Calendar, Trash2, Edit2 } from 'lucide-
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { fetchBranches, deleteBranch } from '@/api/branches';
+import { fetchStockLevels } from '@/api/stock';
 import { useProfile } from '@/hooks/useProfile';
 import { CreateBranchModal } from '@/components/CreateBranchModal';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogDescription,
+    DialogFooter,
+} from "@/components/ui/dialog";
 
 export function BranchesPage() {
     const queryClient = useQueryClient();
@@ -15,6 +24,7 @@ export function BranchesPage() {
     // Default to admin-view while loading to prevent flicker for owners
     const isAdmin = isProfileLoading || profile?.role === 'admin';
     const [isAddModalOpen, setIsAddModalOpen] = React.useState(false);
+    const [isAlertOpen, setIsAlertOpen] = React.useState(false);
 
     const { data: branches, isLoading } = useQuery({
         queryKey: ['branches'],
@@ -30,9 +40,20 @@ export function BranchesPage() {
         onError: () => toast.error('Failed to remove branch')
     });
 
-    const handleDelete = (id: string) => {
-        if (confirm('Are you sure you want to PERMANENTLY delete this branch?')) {
-            deleteMutation.mutate(id);
+    const handleDelete = async (id: string) => {
+        try {
+            const stock = await fetchStockLevels({ branch_id: id });
+            const totalStock = stock.reduce((sum, item) => sum + item.quantity, 0);
+
+            if (totalStock > 0) {
+                setIsAlertOpen(true);
+            } else {
+                if (confirm('Are you sure you want to PERMANENTLY delete this branch?')) {
+                    deleteMutation.mutate(id);
+                }
+            }
+        } catch (error) {
+            toast.error("Failed to verify branch stock levels.");
         }
     };
 
@@ -119,6 +140,33 @@ export function BranchesPage() {
                 isOpen={isAddModalOpen}
                 onClose={() => setIsAddModalOpen(false)}
             />
+
+            <Dialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
+                <DialogContent className="sm:max-w-[425px] bg-black/95 border-rose-500/30 backdrop-blur-2xl text-white">
+                    <DialogHeader>
+                        <div className="flex items-center space-x-3 mb-2">
+                            <div className="p-2 rounded-lg bg-rose-500/20 text-rose-500">
+                                <Trash2 className="h-5 w-5" />
+                            </div>
+                            <DialogTitle className="text-xl font-bold tracking-tight text-white">Action Denied</DialogTitle>
+                        </div>
+                        <DialogDescription className="text-sm text-rose-400 font-medium">
+                            Cannot deactivate this branch.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="py-4 text-muted-foreground text-sm">
+                        This location is currently holding active physical inventory. Please transfer the remaining inventory to another location first before attempting to delete or deactivate this branch.
+                    </div>
+                    <DialogFooter>
+                        <Button
+                            onClick={() => setIsAlertOpen(false)}
+                            className="bg-black border border-white/10 hover:bg-white/5 text-white w-full"
+                        >
+                            Understood
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

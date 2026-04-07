@@ -18,7 +18,7 @@ export function KanbanColumn({ title, count, id, icon: Icon, color, children }: 
         <div
             ref={setNodeRef}
             className={cn(
-                "flex flex-col w-full min-w-[300px] gap-4 transition-colors rounded-2xl p-2",
+                "flex flex-col w-full h-fit min-h-[150px] gap-4 transition-colors rounded-2xl p-2",
                 isOver && "bg-white/5"
             )}
         >
@@ -38,14 +38,14 @@ export function KanbanColumn({ title, count, id, icon: Icon, color, children }: 
             </div>
 
             {/* Column Content */}
-            <div className="flex-1 flex flex-col space-y-4 min-h-[500px]">
+            <div className="flex-1 flex flex-col space-y-4 min-h-[80px]">
                 {children}
 
                 {/* Empty State / Add Placeholder */}
                 {count === 0 && (
-                    <div className="flex-1 rounded-xl border border-dashed border-white/5 flex flex-col items-center justify-center p-8 text-center text-muted-foreground group hover:border-primary/20 transition-all">
-                        <div className="p-3 rounded-full bg-white/5 mb-2 group-hover:bg-primary/10 transition-all">
-                            <Plus className="h-5 w-5 group-hover:text-primary transition-all" />
+                    <div className="flex-1 rounded-xl border border-dashed border-white/5 flex flex-col items-center justify-center p-4 py-6 text-center text-muted-foreground group hover:border-primary/20 transition-all">
+                        <div className="p-2 rounded-full bg-white/5 mb-2 group-hover:bg-primary/10 transition-all">
+                            <Plus className="h-4 w-4 group-hover:text-primary transition-all" />
                         </div>
                         <span className="text-xs">No {title.toLowerCase()} orders</span>
                     </div>

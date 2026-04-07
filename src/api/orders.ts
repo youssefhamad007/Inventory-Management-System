@@ -19,3 +19,8 @@ export async function updateOrderStatus(id: string, status: string) {
     const { data } = await apiClient.put(`orders/${id}/status`, { status });
     return data;
 }
+
+export async function receiveOrder(id: string, payload: { items: { product_id: string; received_quantity: number; }[] }) {
+    const { data } = await apiClient.post(`orders/${id}/receive`, payload);
+    return data;
+}

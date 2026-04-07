@@ -32,18 +32,22 @@ async def adjust_stock(
         )
 
     # BE-TASK-03: Intercept large negative adjustments by staff for approval workflow.
-    # A unit_cost must be provided to evaluate the financial threshold.
-    if (
-        user["role"] == "staff"
-        and adjustment.quantity_change < 0
-        and adjustment.unit_cost is not None
-    ):
-        adjusted_value = abs(adjustment.quantity_change) * Decimal(str(adjustment.unit_cost))
+    if user["role"] == "staff" and adjustment.quantity_change < 0:
+        from app.db.supabase import get_admin_client
+        admin = get_admin_client()
+        prod_res = admin.table("products").select("unit_price").eq("id", str(adjustment.product_id)).execute()
+        
+        actual_unit_cost = Decimal("0.00")
+        if prod_res.data:
+            actual_unit_cost = Decimal(str(prod_res.data[0].get("unit_price", 0)))
+
+        adjusted_value = abs(adjustment.quantity_change) * actual_unit_cost
+        
         if adjusted_value > STAFF_NEGATIVE_ADJUSTMENT_THRESHOLD:
             # Block direct execution and queue for manager review
             approval = StockService.create_pending_approval(
                 adj=adjustment,
-                unit_cost=Decimal(str(adjustment.unit_cost)),
+                unit_cost=actual_unit_cost,
                 requested_value=adjusted_value,
                 requested_by=user["id"],
             )

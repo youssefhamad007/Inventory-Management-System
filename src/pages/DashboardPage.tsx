@@ -10,6 +10,8 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import { fetchDashboardSummary } from '@/api/dashboard';
 import { cn } from '@/lib/utils';
+import { useProfile } from '@/hooks/useProfile';
+import { ApprovalsWidget } from '@/components/dashboard/ApprovalsWidget';
 
 interface DashboardStats {
     total_inventory_value: number;
@@ -22,6 +24,9 @@ interface DashboardStats {
 }
 
 export function DashboardPage() {
+    const { data: profile, isLoading: isProfileLoading } = useProfile();
+    const isManager = !isProfileLoading && (profile?.role === 'admin' || profile?.role === 'manager');
+
     const { data: stats, isLoading } = useQuery<DashboardStats>({
         queryKey: ['dashboard-stats'],
         queryFn: () => fetchDashboardSummary(),
@@ -116,12 +121,16 @@ export function DashboardPage() {
             </div>
 
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7">
-                {/* Main Content Area placeholder */}
-                <div className="lg:col-span-4 rounded-2xl border border-white/5 bg-black/40 backdrop-blur-sm p-8 flex flex-col items-center justify-center min-h-[400px]">
-                    <Activity className="h-12 w-12 text-primary/20 mb-4" />
-                    <p className="text-muted-foreground text-center max-w-xs">
-                        Valuation trends and category analysis charts are available in the <span className="text-primary font-semibold">Reports</span> section.
-                    </p>
+                <div className="lg:col-span-4 space-y-6">
+                    {isManager && <ApprovalsWidget />}
+                    {!isManager && (
+                        <div className="rounded-2xl border border-white/5 bg-black/40 backdrop-blur-sm p-8 flex flex-col items-center justify-center min-h-[400px]">
+                            <Activity className="h-12 w-12 text-primary/20 mb-4" />
+                            <p className="text-muted-foreground text-center max-w-xs">
+                                Valuation trends and category analysis charts are available in the <span className="text-primary font-semibold">Reports</span> section.
+                            </p>
+                        </div>
+                    )}
                 </div>
 
                 {/* Recent Activity */}

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import {
     Dialog,
     DialogContent,
@@ -11,9 +12,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { UserPlus, Shield, Mail } from 'lucide-react';
+import { UserPlus, Shield, Mail, Building2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { apiClient } from '@/api/client';
+import { fetchBranches } from '@/api/branches';
+import type { Branch } from '@/types/schema';
 
 interface InviteUserModalProps {
     isOpen: boolean;
@@ -26,19 +29,28 @@ export function InviteUserModal({ isOpen, onClose }: InviteUserModalProps) {
         email: '',
         full_name: '',
         role: 'staff',
-        password: '' // Temporary pass since we don't have true magic links yet
+        password: '', // Temporary pass since we don't have true magic links yet
+        branch_id: ''
+    });
+
+    const { data: branches } = useQuery<Branch[]>({
+        queryKey: ['branches'],
+        queryFn: () => fetchBranches()
     });
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
         try {
-            await apiClient.post('users/create', formData);
+            const payload = { ...formData };
+            if (!payload.branch_id) delete (payload as any).branch_id;
+
+            await apiClient.post('users/create', payload);
             toast.success('Personnel Authorized', {
                 description: `${formData.full_name} has been added to the IMS database.`
             });
             onClose();
-            setFormData({ email: '', full_name: '', role: 'staff', password: '' });
+            setFormData({ email: '', full_name: '', role: 'staff', password: '', branch_id: '' });
         } catch (err) {
             toast.error('Authentication Error', {
                 description: 'Failed to provision new user identity.'
@@ -101,24 +113,47 @@ export function InviteUserModal({ isOpen, onClose }: InviteUserModalProps) {
                             />
                         </div>
 
-                        <div className="space-y-2">
-                            <Label className="text-xs uppercase tracking-widest text-indigo-400/70">Clearance Level</Label>
-                            <Select
-                                value={formData.role}
-                                onValueChange={(v) => setFormData({ ...formData, role: v })}
-                            >
-                                <SelectTrigger className="bg-white/5 border-white/5 focus:border-indigo-500/50">
-                                    <div className="flex items-center">
-                                        <Shield className="mr-2 h-4 w-4 text-indigo-400" />
-                                        <SelectValue />
-                                    </div>
-                                </SelectTrigger>
-                                <SelectContent className="bg-black/95 border-white/10">
-                                    <SelectItem value="admin">Level 3 (Admin)</SelectItem>
-                                    <SelectItem value="manager">Level 2 (Manager)</SelectItem>
-                                    <SelectItem value="staff">Level 1 (Staff)</SelectItem>
-                                </SelectContent>
-                            </Select>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label className="text-xs uppercase tracking-widest text-indigo-400/70">Clearance</Label>
+                                <Select
+                                    value={formData.role}
+                                    onValueChange={(v) => setFormData({ ...formData, role: v })}
+                                >
+                                    <SelectTrigger className="bg-white/5 border-white/5 focus:border-indigo-500/50">
+                                        <div className="flex items-center">
+                                            <Shield className="mr-2 h-4 w-4 text-indigo-400" />
+                                            <SelectValue />
+                                        </div>
+                                    </SelectTrigger>
+                                    <SelectContent className="bg-black/95 border-white/10">
+                                        <SelectItem value="admin">Level 3 (Admin)</SelectItem>
+                                        <SelectItem value="manager">Level 2 (Manager)</SelectItem>
+                                        <SelectItem value="staff">Level 1 (Staff)</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label className="text-xs uppercase tracking-widest text-indigo-400/70">Assigned Branch</Label>
+                                <Select
+                                    value={formData.branch_id}
+                                    onValueChange={(v) => setFormData({ ...formData, branch_id: v })}
+                                >
+                                    <SelectTrigger className="bg-white/5 border-white/5 focus:border-indigo-500/50">
+                                        <div className="flex items-center">
+                                            <Building2 className="mr-2 h-4 w-4 text-indigo-400" />
+                                            <SelectValue placeholder="Global (HQ)" />
+                                        </div>
+                                    </SelectTrigger>
+                                    <SelectContent className="bg-black/95 border-white/10">
+                                        <SelectItem value="none">GLOBAL (HQ)</SelectItem>
+                                        {branches?.map((b) => (
+                                            <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
                         </div>
                     </div>
 
@@ -131,7 +166,7 @@ export function InviteUserModal({ isOpen, onClose }: InviteUserModalProps) {
                             disabled={loading}
                             className="bg-indigo-600 text-white font-bold hover:bg-indigo-500 shadow-[0_0_15px_rgba(99,102,241,0.4)]"
                         >
-                            {loading ? 'Provisioning...' : 'Confirm Authorization'}
+                            {loading ? 'Provisioning...' : 'Authorize'}
                         </Button>
                     </DialogFooter>
                 </form>

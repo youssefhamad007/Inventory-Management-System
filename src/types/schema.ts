@@ -1,6 +1,6 @@
 export type UserRole = 'admin' | 'manager' | 'staff';
 export type OrderType = 'purchase' | 'sale';
-export type OrderStatus = 'draft' | 'confirmed' | 'shipped' | 'delivered' | 'cancelled';
+export type OrderStatus = 'draft' | 'confirmed' | 'shipped' | 'delivered' | 'cancelled' | 'partially_delivered' | 'returned';
 export type TxnType =
     | 'purchase_in'
     | 'sale_out'
@@ -62,6 +62,7 @@ export interface StockLevel {
     product_id: string;
     branch_id: string;
     quantity: number;
+    allocated_quantity: number;
     updated_at: string;
 
     // Optional joins

@@ -65,14 +65,22 @@ export function useAdjustStockMutation() {
             toast.error('Stock adjustment failed. Reverting changes.', { id: 'stock-adjust' });
             console.error(err);
         },
-        onSuccess: (data) => {
-            toast.success('Stock adjusted successfully!', { id: 'stock-adjust' });
-            if (data.low_stock_alert) {
-                toast.warning('Warning: This adjustment resulted in low stock.');
+        onSuccess: (data: any) => {
+            if (data?.pending_approval) {
+                toast.success('Approval Needed', {
+                    id: 'stock-adjust',
+                    description: data.message || 'Exceeds threshold. Flagged for manager review.'
+                });
+            } else {
+                toast.success('Stock adjusted successfully!', { id: 'stock-adjust' });
+                if (data.low_stock_alert) {
+                    toast.warning('Warning: This adjustment resulted in low stock.');
+                }
             }
         },
         onSettled: () => {
             // Always refetch after error or success to ensure data consistency
+            // This will instantly rollback the optimistic UI if a pending_approval occurred!
             queryClient.invalidateQueries({ queryKey: ['stock'] });
         },
     });

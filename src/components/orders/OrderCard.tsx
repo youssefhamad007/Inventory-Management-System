@@ -11,9 +11,10 @@ interface OrderCardProps {
     onClick?: () => void;
     isDragging?: boolean;
     disabled?: boolean;
+    onProcessReturn?: (order: Order) => void;
 }
 
-export function OrderCard({ order, onClick, isDragging, disabled }: OrderCardProps) {
+export function OrderCard({ order, onClick, isDragging, disabled, onProcessReturn }: OrderCardProps) {
     const {
         attributes,
         listeners,
@@ -30,9 +31,12 @@ export function OrderCard({ order, onClick, isDragging, disabled }: OrderCardPro
 
     const statusConfig: Record<string, { color: string; label: string }> = {
         draft: { color: 'bg-slate-500/10 text-slate-400 border-slate-500/20', label: 'DRAFT' },
+        confirm: { color: 'bg-amber-500/10 text-amber-500 border-amber-500/20', label: 'CONFIRMED' }, // fixing typo but we use confirmed
         confirmed: { color: 'bg-primary/10 text-primary border-primary/20', label: 'CONFIRMED' },
         shipped: { color: 'bg-amber-500/10 text-amber-500 border-amber-500/20', label: 'SHIPPED' },
+        partially_delivered: { color: 'bg-teal-500/10 text-teal-400 border-teal-500/20', label: 'PARTIAL' },
         delivered: { color: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20', label: 'DELIVERED' },
+        returned: { color: 'bg-rose-500/10 text-rose-500 border-rose-500/20', label: 'RETURNED' },
         cancelled: { color: 'bg-destructive/10 text-destructive border-destructive/20', label: 'CANCELLED' },
     };
 
@@ -86,8 +90,19 @@ export function OrderCard({ order, onClick, isDragging, disabled }: OrderCardPro
                     <span className="text-[9px] text-muted-foreground uppercase">Total Value</span>
                     <span className="text-sm font-extrabold text-white">${Number(order.total_amount ?? 0).toLocaleString()}</span>
                 </div>
-                <div className="h-7 w-7 rounded-lg bg-white/5 flex items-center justify-center text-muted-foreground group-hover:bg-primary group-hover:text-black transition-all">
-                    <ExternalLink className="h-3.5 w-3.5" />
+                <div className="flex space-x-2">
+                    {order.status === 'delivered' && !disabled && (
+                        <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); onProcessReturn?.(order); }}
+                            className="text-[10px] font-bold px-2 py-1 rounded bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-black transition-colors"
+                        >
+                            RETURN
+                        </button>
+                    )}
+                    <div className="h-7 w-7 rounded-lg bg-white/5 flex items-center justify-center text-muted-foreground group-hover:bg-primary group-hover:text-black transition-all">
+                        <ExternalLink className="h-3.5 w-3.5" />
+                    </div>
                 </div>
             </div>
         </motion.div>

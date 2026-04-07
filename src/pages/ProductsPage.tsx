@@ -9,7 +9,7 @@ import type { ColumnDef } from '@tanstack/react-table';
 import type { Product } from '@/types/schema';
 import { toast } from 'sonner';
 
-import { fetchProducts, createProduct, deleteProduct } from '@/api/products';
+import { fetchProducts, createProduct, deleteProduct, updateProduct } from '@/api/products';
 import { useProfile } from '@/hooks/useProfile';
 
 export function ProductsPage() {
@@ -18,6 +18,7 @@ export function ProductsPage() {
     const queryClient = useQueryClient();
 
     const [isSlideOverOpen, setIsSlideOverOpen] = React.useState(false);
+    const [editingProduct, setEditingProduct] = React.useState<Product | null>(null);
     const [globalFilter, setGlobalFilter] = React.useState('');
     const [pagination, setPagination] = React.useState({ pageIndex: 0, pageSize: 12 });
 
@@ -26,11 +27,11 @@ export function ProductsPage() {
         queryFn: () => fetchProducts(),
     });
 
-    const mutation = useMutation({
+    const createMutation = useMutation({
         mutationFn: createProduct,
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['products'] });
-            setIsSlideOverOpen(false);
+            handleCloseDrawer();
             toast.success('Product registered successfully');
         },
         onError: (err: any) => {
@@ -39,15 +40,34 @@ export function ProductsPage() {
         }
     });
 
-    const handleCreateSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    const editMutation = useMutation({
+        mutationFn: (data: { id: string, payload: any }) => updateProduct(data.id, data.payload),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['products'] });
+            handleCloseDrawer();
+            toast.success('Product updated successfully');
+        },
+        onError: (err: any) => {
+            const detail = err.response?.data?.detail;
+            toast.error(detail || 'Failed to update product');
+        }
+    });
+
+    const handleFormSubmit = (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         const formData = new FormData(e.currentTarget);
-        mutation.mutate({
+        const payload = {
             name: formData.get('name') as string,
             sku: formData.get('sku') as string,
             unit_price: Number(formData.get('price')),
             is_active: true
-        });
+        };
+
+        if (editingProduct) {
+            editMutation.mutate({ id: editingProduct.id, payload });
+        } else {
+            createMutation.mutate(payload);
+        }
     };
 
     const deleteMutation = useMutation({
@@ -64,6 +84,14 @@ export function ProductsPage() {
             deleteMutation.mutate(id);
         }
     };
+
+    const handleCloseDrawer = () => {
+        setIsSlideOverOpen(false);
+        setEditingProduct(null);
+    };
+
+    const isDrawerOpen = isSlideOverOpen || !!editingProduct;
+    const isPending = createMutation.isPending || editMutation.isPending;
 
     const columns: ColumnDef<Product>[] = [
         {
@@ -103,7 +131,14 @@ export function ProductsPage() {
             header: '',
             cell: ({ row }) => (
                 <div className="flex justify-end gap-2 pr-4">
-                    <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-primary/20 hover:text-primary"><Edit2 className="h-4 w-4" /></Button>
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 hover:bg-primary/20 hover:text-primary"
+                        onClick={() => setEditingProduct(row.original)}
+                    >
+                        <Edit2 className="h-4 w-4" />
+                    </Button>
                     <Button
                         variant="ghost"
                         size="icon"
@@ -167,38 +202,40 @@ export function ProductsPage() {
                 </div>
             </div>
 
-            {/* Slide-over for Create Product */}
-            {isSlideOverOpen && (
+            {/* Slide-over for Create / Edit Product */}
+            {isDrawerOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-end bg-black/60 backdrop-blur-sm transition-all duration-300">
                     <div
                         className="w-full max-w-md h-full border-l border-white/10 bg-black/95 backdrop-blur-2xl p-8 shadow-2xl animate-in slide-in-from-right"
                         onClick={(e) => e.stopPropagation()}
                     >
                         <div className="flex items-center justify-between mb-8">
-                            <h2 className="text-2xl font-bold text-primary">New Registry Entry</h2>
-                            <Button variant="ghost" size="icon" onClick={() => setIsSlideOverOpen(false)}>
+                            <h2 className="text-2xl font-bold text-primary">
+                                {editingProduct ? 'Update Product Data' : 'New Registry Entry'}
+                            </h2>
+                            <Button variant="ghost" size="icon" onClick={handleCloseDrawer}>
                                 <X className="h-5 w-5" />
                             </Button>
                         </div>
 
-                        <form onSubmit={handleCreateSubmit} className="space-y-6">
+                        <form onSubmit={handleFormSubmit} className="space-y-6">
                             <div className="space-y-2">
                                 <label className="text-sm font-medium text-muted-foreground uppercase tracking-widest">Product Name</label>
-                                <Input name="name" required placeholder="e.g. Ergonomic Office Chair" className="bg-white/5 border-white/10" />
+                                <Input key={`name-${editingProduct?.id || 'new'}`} name="name" required defaultValue={editingProduct?.name || ''} placeholder="e.g. Ergonomic Office Chair" className="bg-white/5 border-white/10" />
                             </div>
                             <div className="space-y-2">
                                 <label className="text-sm font-medium text-muted-foreground uppercase tracking-widest">SKU</label>
-                                <Input name="sku" required placeholder="CHR-001" className="bg-white/5 border-white/10" />
+                                <Input key={`sku-${editingProduct?.id || 'new'}`} name="sku" required defaultValue={editingProduct?.sku || ''} placeholder="CHR-001" className="bg-white/5 border-white/10" />
                             </div>
                             <div className="space-y-2">
                                 <label className="text-sm font-medium text-muted-foreground uppercase tracking-widest">Retail Price ($)</label>
-                                <Input name="price" type="number" step="0.01" min="0" required placeholder="0.00" className="bg-white/5 border-white/10" />
+                                <Input key={`price-${editingProduct?.id || 'new'}`} name="price" type="number" step="0.01" min="0" required defaultValue={editingProduct?.unit_price || ''} placeholder="0.00" className="bg-white/5 border-white/10" />
                             </div>
 
                             <div className="pt-8 flex gap-3">
-                                <Button type="button" variant="outline" onClick={() => setIsSlideOverOpen(false)} className="flex-1">Cancel</Button>
-                                <Button type="submit" disabled={mutation.isPending} className="flex-1 shadow-[0_0_20px_rgba(0,184,217,0.3)]">
-                                    {mutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                <Button type="button" variant="outline" onClick={handleCloseDrawer} className="flex-1">Cancel</Button>
+                                <Button type="submit" disabled={isPending} className="flex-1 shadow-[0_0_20px_rgba(0,184,217,0.3)]">
+                                    {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                                     Commit Record
                                 </Button>
                             </div>

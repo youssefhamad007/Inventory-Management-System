@@ -54,7 +54,7 @@ export function StockPage() {
         },
         {
             accessorKey: 'quantity',
-            header: 'Current Quantity',
+            header: 'On-Hand',
             cell: ({ row }) => {
                 const isLowStock = row.original.quantity <= ((row.original as any).products?.min_stock_level || row.original.product?.min_stock_level || 0);
                 return (
@@ -63,6 +63,27 @@ export function StockPage() {
                         isLowStock ? "bg-destructive/10 text-destructive" : "bg-emerald-500/10 text-emerald-500"
                     )}>
                         {row.original.quantity} {isLowStock && '!'}
+                    </span>
+                );
+            }
+        },
+        {
+            accessorKey: 'allocated_quantity',
+            header: 'Allocated',
+            cell: ({ row }) => (
+                <span className="font-bold text-lg px-2.5 py-1 text-amber-500">
+                    {row.original.allocated_quantity || 0}
+                </span>
+            )
+        },
+        {
+            id: 'available',
+            header: 'Available',
+            cell: ({ row }) => {
+                const available = row.original.quantity - (row.original.allocated_quantity || 0);
+                return (
+                    <span className="font-bold text-lg px-2.5 py-1 text-primary">
+                        {available}
                     </span>
                 );
             }

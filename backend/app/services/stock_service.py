@@ -123,7 +123,9 @@ class StockService:
     def list_pending_approvals(jwt: str, approval_status: Optional[str] = "pending") -> List[dict]:
         """List approval requests (managers use their JWT; admin client for full visibility)."""
         admin = get_admin_client()
-        query = admin.table("pending_approvals").select("*")
+        query = admin.table("pending_approvals").select(
+            "*, product:products!product_id(name, sku), branch:branches!branch_id(name), requester:profiles!requested_by(full_name)"
+        )
         if approval_status:
             query = query.eq("approval_status", approval_status)
         result = query.order("created_at", desc=True).execute()

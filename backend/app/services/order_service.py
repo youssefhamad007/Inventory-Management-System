@@ -25,7 +25,7 @@ class OrderService:
         Convert a raw Supabase order record (with nested order_items)
         into a strongly-typed OrderResponse model.
         """
-        items_raw = record.get("order_items", []) or []
+        items_raw = record.get("items", record.get("order_items", [])) or []
         items: List[OrderItemResponse] = [OrderItemResponse(**item) for item in items_raw]
 
         payload = {**record, "items": items}

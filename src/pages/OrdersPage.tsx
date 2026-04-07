@@ -31,6 +31,7 @@ import { updateOrderStatus, fetchOrders } from '@/api/orders';
 import { KanbanColumn } from '@/components/orders/KanbanColumn';
 import { OrderCard } from '@/components/orders/OrderCard';
 import { CreateOrderModal } from '@/components/CreateOrderModal';
+import { ReceiveShipmentModal } from '@/components/orders/ReceiveShipmentModal';
 import { Button } from '@/components/ui/button';
 import { useProfile } from '@/hooks/useProfile';
 import type { Order, OrderStatus } from '@/types/schema';
@@ -39,7 +40,9 @@ const COLUMNS: { id: OrderStatus; label: string; icon: any; color: string }[] = 
     { id: 'draft', label: 'Draft', icon: FileText, color: 'text-muted-foreground' },
     { id: 'confirmed', label: 'Confirmed', icon: Clock, color: 'text-amber-500' },
     { id: 'shipped', label: 'In Transit', icon: Truck, color: 'text-primary' },
+    { id: 'partially_delivered', label: 'Partial', icon: PackagePlus, color: 'text-teal-400' },
     { id: 'delivered', label: 'Delivered', icon: CheckCircle2, color: 'text-emerald-500' },
+    { id: 'returned', label: 'Returned', icon: Truck, color: 'text-rose-500' },
 ];
 
 export function OrdersPage() {
@@ -49,7 +52,9 @@ export function OrdersPage() {
     const canManageOrders = !isProfileLoading && (profile?.role === 'admin' || profile?.role === 'manager' || profile?.role === 'staff');
 
     const [isCreateOpen, setIsCreateOpen] = React.useState(false);
+    const [receiveModalOrder, setReceiveModalOrder] = React.useState<Order | null>(null);
     const [activeId, setActiveId] = React.useState<string | null>(null);
+    const [originalStatus, setOriginalStatus] = React.useState<OrderStatus | null>(null);
     const [localOrders, setLocalOrders] = React.useState<Order[]>([]);
 
     const { data: orders } = useQuery<Order[]>({
@@ -92,6 +97,8 @@ export function OrdersPage() {
 
     const handleDragStart = (event: DragStartEvent) => {
         setActiveId(event.active.id as string);
+        const order = localOrders.find(o => o.id === event.active.id);
+        if (order) setOriginalStatus(order.status);
     };
 
     const handleDragOver = (event: DragOverEvent) => {
@@ -120,18 +127,37 @@ export function OrdersPage() {
 
         if (!overId) {
             setActiveId(null);
+            setOriginalStatus(null);
             return;
         }
 
-        const activeContainer = findContainer(active.id as string);
         const overContainer = findContainer(overId as string);
 
-        if (activeContainer && overContainer) {
-            // Trigger actual API update
-            mutation.mutate({ id: active.id as string, status: overContainer });
+        if (originalStatus && overContainer) {
+            const order_id = active.id as string;
+            const order = localOrders.find(o => o.id === order_id);
+            if (order?.order_type === 'purchase' && overContainer === 'delivered' && originalStatus !== 'delivered') {
+                // Open receive shipment modal for purchase orders becoming delivered
+                setReceiveModalOrder(order);
+            } else if (originalStatus !== overContainer) {
+                // Trigger actual API update only if status changed
+                mutation.mutate({ id: order_id, status: overContainer });
+            }
         }
 
         setActiveId(null);
+        setOriginalStatus(null);
+    };
+
+    const handleProcessReturn = (order: Order) => {
+        if (!canManageOrders) return;
+        mutation.mutate({ id: order.id, status: 'returned' });
+    };
+
+    const handleReceiveModalClose = () => {
+        setReceiveModalOrder(null);
+        // Invalidate queries to reset any optimistic local state
+        queryClient.invalidateQueries({ queryKey: ['orders'] });
     };
 
     const activeOrder = activeId ? localOrders.find(o => o.id === activeId) : null;
@@ -164,7 +190,7 @@ export function OrdersPage() {
                 onDragOver={handleDragOver}
                 onDragEnd={handleDragEnd}
             >
-                <div className="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 overflow-y-auto custom-scrollbar pb-4 pr-2">
                     {COLUMNS.map((col) => (
                         <KanbanColumn
                             key={col.id}
@@ -182,7 +208,12 @@ export function OrdersPage() {
                                     {localOrders
                                         .filter(o => o.status === col.id)
                                         .map((order) => (
-                                            <OrderCard key={order.id} order={order} disabled={!canManageOrders} />
+                                            <OrderCard
+                                                key={order.id}
+                                                order={order}
+                                                disabled={!canManageOrders}
+                                                onProcessReturn={handleProcessReturn}
+                                            />
                                         ))}
                                 </div>
                             </SortableContext>
@@ -202,6 +233,12 @@ export function OrdersPage() {
             <CreateOrderModal
                 isOpen={isCreateOpen}
                 onClose={() => setIsCreateOpen(false)}
+            />
+
+            <ReceiveShipmentModal
+                isOpen={!!receiveModalOrder}
+                onClose={handleReceiveModalClose}
+                order={receiveModalOrder}
             />
         </div>
     );

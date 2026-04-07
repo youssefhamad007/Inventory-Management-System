@@ -26,10 +26,15 @@ class OrderItemBase(BaseModel):
 class OrderItemCreate(OrderItemBase):
     pass
 
+class ProductSnippet(BaseModel):
+    name: str
+    sku: str
+
 class OrderItemResponse(OrderItemBase):
     id: UUID
     order_id: UUID
     subtotal: Decimal
+    product: Optional[ProductSnippet] = None
 
 class OrderBase(BaseModel):
     order_number: Optional[str] = None
@@ -64,5 +69,7 @@ class OrderResponse(OrderBase):
     created_at: datetime
     updated_at: datetime
     items: List[OrderItemResponse] = []
+    branch: Optional[dict] = None
+    supplier: Optional[dict] = None
 
     model_config = ConfigDict(from_attributes=True)
